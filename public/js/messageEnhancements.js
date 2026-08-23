@@ -1,63 +1,36 @@
-(function () {
-  'use strict';
-  const HOLD_MS=650, MOVE_PX=12, $=id=>document.getElementById(id);
-  const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
-  let timer=null, running=false;
-
-  function installStyles(){
-    if($('blogify-message-ui-style')) return;
-    const s=document.createElement('style'); s.id='blogify-message-ui-style';
-    s.textContent=`
-      .blogify-reply-quote{display:block;width:100%;margin:-2px -2px 8px;padding:7px 9px;border-left:3px solid #3797f0;border-radius:8px;background:rgba(55,151,240,.10);text-align:left;cursor:pointer;overflow:hidden}
-      .sent .blogify-reply-quote{border-left-color:rgba(255,255,255,.9);background:rgba(0,0,0,.12)}
-      .blogify-reply-quote .rq-title{font-size:10px;line-height:1.25;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .blogify-reply-quote .rq-text{margin-top:2px;font-size:11px;line-height:1.3;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .blogify-reply-highlight{animation:blogifyReplyHighlight .9s ease-out!important}
-      .blogify-hold-active{animation:blogifyHoldPulse .18s ease-out;box-shadow:0 0 0 3px rgba(55,151,240,.24)!important}
-      @keyframes blogifyHoldPulse{from{transform:scale(.985)}to{transform:scale(1)}}
-      @keyframes blogifyReplyHighlight{0%,100%{box-shadow:0 0 0 0 rgba(55,151,240,0)}40%{box-shadow:0 0 0 6px rgba(55,151,240,.35)}}`;
-    document.head.appendChild(s);
-  }
-
-  function cid(){return window.__BLOGIFY_CONVERSATION_ID||null;}
-  async function getMessages(){
-    const id=cid(); if(!id) return [];
-    try{const r=await fetch('/messages/'+encodeURIComponent(id)+'?limit=100',{credentials:'same-origin'});const d=await r.json().catch(()=>({}));return r.ok&&d.success&&Array.isArray(d.messages)?d.messages:[];}catch(_){return[];}
-  }
-  function text(m){if(!m)return'Message';if(m.deleted)return'This message was deleted';if(m.text)return m.text;return({image:'Photo',video:'Video',audio:'Voice message',profile:'Shared profile'})[m.mediaType]||'Message';}
-  function row(id){for(const r of document.querySelectorAll('.message-row[data-id]'))if(String(r.dataset.id)===String(id))return r;return null;}
-  function decorate(r,m,map){
-    const b=r?.querySelector('.message-bubble');if(!b)return;b.querySelector('.blogify-reply-quote')?.remove();if(!m.replyTo)return;
-    const q=typeof m.replyTo==='object'?m.replyTo:map.get(String(m.replyTo));const t=text(q||{text:'Message'});const oid=q?._id||m.replyTo;
-    const el=document.createElement('div');el.className='blogify-reply-quote';el.setAttribute('role','button');el.tabIndex=0;
-    el.innerHTML='<div class="rq-title">Replying &quot;'+esc(t)+'&quot;</div><div class="rq-text">'+esc(t)+'</div>';
-    const jump=e=>{e.preventDefault();e.stopPropagation();const o=row(oid);if(!o)return;o.scrollIntoView({behavior:'smooth',block:'center'});const ob=o.querySelector('.message-bubble');ob?.classList.add('blogify-reply-highlight');setTimeout(()=>ob?.classList.remove('blogify-reply-highlight'),900);};
-    el.addEventListener('click',jump);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')jump(e);});b.prepend(el);
-  }
-  async function hydrate(){
-    if(running||!$('messagesArea')||!cid())return;running=true;
-    try{const ms=await getMessages();const map=new Map(ms.map(m=>[String(m._id),m]));window.__BLOGIFY_MESSAGE_CACHE=map;ms.forEach(m=>{const r=row(m._id);if(r)decorate(r,m,map);});bindLongPress();}finally{running=false;}
-  }
-  function schedule(){clearTimeout(timer);timer=setTimeout(hydrate,180);}
-  function openPopup(b){
-    /* IMPORTANT: message.ejs owns the authenticated socket and popup actions. */
-    b.dataset.blogifyLongPressOpen='1';b.click();setTimeout(()=>delete b.dataset.blogifyLongPressOpen,500);
-  }
-  function bindLongPress(){
-    const a=$('messagesArea');if(!a)return;
-    a.querySelectorAll('.message-bubble[data-message-id]').forEach(b=>{
-      if(b.dataset.blogifyLongPressBound==='1')return;b.dataset.blogifyLongPressBound='1';
-      let hold=null,sx=0,sy=0,triggered=false;
-      b.addEventListener('contextmenu',e=>{e.preventDefault();if(!triggered)openPopup(b);},true);
-      b.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;sx=e.clientX;sy=e.clientY;triggered=false;clearTimeout(hold);hold=setTimeout(()=>{hold=null;triggered=true;b.classList.add('blogify-hold-active');navigator.vibrate?.(12);openPopup(b);setTimeout(()=>b.classList.remove('blogify-hold-active'),250);},HOLD_MS);},true);
-      b.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-sx,e.clientY-sy)>MOVE_PX){clearTimeout(hold);hold=null;}},true);
-      b.addEventListener('pointerup',()=>{clearTimeout(hold);hold=null;},true);b.addEventListener('pointercancel',()=>{clearTimeout(hold);hold=null;},true);
-    });
-  }
-  function start(){
-    installStyles();bindLongPress();const a=$('messagesArea');
-    if(a&&!a.dataset.blogifyEnhancementObserver){a.dataset.blogifyEnhancementObserver='1';new MutationObserver(schedule).observe(a,{childList:true,subtree:true});}
-    schedule();setTimeout(hydrate,700);setTimeout(hydrate,1800);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+(function(){
+'use strict';
+const HOLD_MS=650, EDIT_MS=60000, MOVE_PX=12;
+let conversationId=window.__BLOGIFY_CONVERSATION_ID||null, selectedMessage=null, editingMessageId=null;
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=m=>{const e=$('toast');if(e){e.textContent=m;e.classList.add('show');clearTimeout(e.__t);e.__t=setTimeout(()=>e.classList.remove('show'),2200)}else console.info('[Blogify]',m)};
+function socket(){try{const ms=window.io?.managers||{};for(const k of Object.keys(ms)){const s=ms[k]?.nsps?.['/'];if(s?.connected)return s}}catch(_){}return null}
+function emit(ev,data){const s=socket();if(!s){toast('Chat connection is unavailable');return false}s.emit(ev,data);return true}
+function mine(m){const r=m?._id?document.querySelector('.message-row[data-id="'+CSS.escape(String(m._id))+'"]'):null;return r?r.classList.contains('sent'):String(m?.senderId?._id||m?.senderId||'')===String(window.__BLOGIFY_MY_ID||'')}
+function canEdit(m){return mine(m)&&!m?.mediaType&&!m?.deleted&&Date.now()-new Date(m.createdAt).getTime()<EDIT_MS}
+function styles(){if($('blogify-reply-live-style'))return;const s=document.createElement('style');s.id='blogify-reply-live-style';s.textContent=`
+.blogify-reply-quote{display:block;margin:-3px -3px 7px;padding:6px 8px;border-left:3px solid rgba(255,255,255,.8);border-radius:7px;background:rgba(0,0,0,.08);text-align:left;cursor:pointer;max-width:100%;overflow:hidden}.received .blogify-reply-quote{border-left-color:#3797f0;background:rgba(55,151,240,.08)}.blogify-reply-quote .rq-title{font-size:9px;font-weight:800;opacity:.8;margin-bottom:2px}.blogify-reply-quote .rq-text{font-size:10px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.blogify-edited-label{font-size:8px;opacity:.72;margin-left:2px}.blogify-editing{outline:2px solid rgba(55,151,240,.45)}
+.blogify-inline-edit{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-left:3px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted,#737373);font-size:9px;cursor:pointer;opacity:.72;vertical-align:middle}.blogify-inline-edit:hover{background:rgba(55,151,240,.12);color:#3797f0;opacity:1}.sent .blogify-inline-edit{color:var(--muted,#737373)}
+`;document.head.appendChild(s)}
+async function ensureConversation(){if(conversationId)return conversationId;const u=new URLSearchParams(location.search).get('user');if(!u)return null;const r=await fetch('/messages/conversation',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({userId:u})});const d=await r.json();if(!r.ok||!d.success)throw Error(d.message||'Unable to open conversation');conversationId=String(d.conversationId);window.__BLOGIFY_CONVERSATION_ID=conversationId;return conversationId}
+async function getMessage(id){await ensureConversation();const r=await fetch('/messages/'+encodeURIComponent(conversationId)+'?limit=100',{credentials:'same-origin'});const d=await r.json();if(!r.ok||!d.success)throw Error(d.message||'Unable to load message');return (d.messages||[]).find(m=>String(m._id)===String(id))||null}
+function replyData(r){if(!r)return null;if(typeof r==='object')return r;const cached=window.__BLOGIFY_MESSAGE_CACHE?.get(String(r));return cached||{_id:r,text:'Message'}}
+function replyText(r){if(!r)return 'Message';if(r.deleted)return 'This message was deleted';if(r.text)return r.text;return ({image:'Photo',video:'Video',audio:'Voice message',profile:'Shared profile'})[r.mediaType]||'Message'}
+function startEditing(m){if(!canEdit(m))return toast('Edit is available for only 1 minute.');editingMessageId=String(m._id);const input=$('messageInput');if(!input)return;input.value=m.text||'';input.focus();input.classList.add('blogify-editing');closeSheet();toast('Editing message — press send to save')}
+function addInlineEdit(b,m){const row=b?.closest('.message-row');const meta=row?.querySelector('.message-meta');if(!row||!meta)return;meta.querySelector('.blogify-inline-edit')?.remove();if(!canEdit(m))return;const btn=document.createElement('button');btn.type='button';btn.className='blogify-inline-edit';btn.title='Edit message';btn.setAttribute('aria-label','Edit message');btn.innerHTML='<i class="fas fa-pen"></i>';btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();startEditing(m)},true);meta.appendChild(btn)}
+function decorateBubble(b,m,cache){if(!b||!m)return;if(cache)cache.set(String(m._id),m);b.querySelector('.blogify-reply-quote')?.remove();const r=replyData(m.replyTo);if(r){const q=document.createElement('div');q.className='blogify-reply-quote';q.innerHTML='<div class="rq-title">Replying &quot;'+esc(replyText(r))+'&quot;</div><div class="rq-text">'+esc(replyText(r))+'</div>';q.onclick=()=>{const target=document.querySelector('.message-row[data-id="'+CSS.escape(String(r._id||''))+'"]');target?.scrollIntoView({behavior:'smooth',block:'center'});target?.querySelector('.message-bubble')?.classList.add('blogify-editing');setTimeout(()=>target?.querySelector('.message-bubble')?.classList.remove('blogify-editing'),700)};b.prepend(q)}const meta=b.closest('.message-row')?.querySelector('.message-meta');meta?.querySelector('.blogify-edited-label')?.remove();if(m.edited&&meta){const label=document.createElement('span');label.className='blogify-edited-label';label.textContent='Edited';meta.appendChild(label)}addInlineEdit(b,m)}
+async function hydrate(){try{await ensureConversation();const r=await fetch('/messages/'+encodeURIComponent(conversationId)+'?limit=100',{credentials:'same-origin'});const d=await r.json();if(!r.ok||!d.success)return;const cache=new Map((d.messages||[]).map(m=>[String(m._id),m]));for(const m of d.messages||[]){const b=document.querySelector('.message-bubble[data-message-id="'+CSS.escape(String(m._id))+'"]');if(b)decorateBubble(b,m,cache)}window.__BLOGIFY_MESSAGE_CACHE=cache}catch(e){console.warn('message decoration:',e.message)}}
+function applyEdited(m){if(!m?._id)return;const row=document.querySelector('.message-row[data-id="'+CSS.escape(String(m._id))+'"]');const b=row?.querySelector('.message-bubble');if(!b)return;const q=b.querySelector('.blogify-reply-quote');b.textContent=m.text||'';if(q)b.prepend(q);const c=window.__BLOGIFY_MESSAGE_CACHE;if(c)c.set(String(m._id),m);decorateBubble(b,m,c)}
+function removeRow(id){document.querySelector('.message-row[data-id="'+CSS.escape(String(id||''))+'"]')?.remove()}
+function configure(m){selectedMessage=m;window.__BLOGIFY_SELECTED_MESSAGE=m;const mineMe=mine(m);const ids=['deleteForMeAction','unsendAction','editAction','replyAction','copyAction','forwardShareAction','saveAction','viewMediaAction','playVideoAction','playAudioAction','downloadMediaAction','openProfileAction','copyProfileAction'];for(const id of ids){const e=$(id);if(e)e.style.display='none'}if($('replyAction')&&!m.deleted)$('replyAction').style.display='flex';if($('copyAction')&&m.text)$('copyAction').style.display='flex';if($('forwardShareAction')&&!m.deleted)$('forwardShareAction').style.display='flex';if($('saveAction')&&!m.deleted)$('saveAction').style.display='flex';if($('deleteForMeAction')&&!m.deleted)$('deleteForMeAction').style.display='flex';if($('unsendAction')&&mineMe&&!m.deleted)$('unsendAction').style.display='flex';if($('editAction')&&canEdit(m))$('editAction').style.display='flex';if($('viewMediaAction')&&m.mediaType==='image')$('viewMediaAction').style.display='flex';if($('playVideoAction')&&m.mediaType==='video')$('playVideoAction').style.display='flex';if($('playAudioAction')&&m.mediaType==='audio')$('playAudioAction').style.display='flex';if($('downloadMediaAction')&&['image','video','audio'].includes(m.mediaType))$('downloadMediaAction').style.display='flex';if($('openProfileAction')&&m.mediaType==='profile')$('openProfileAction').style.display='flex';if($('copyProfileAction')&&m.mediaType==='profile')$('copyProfileAction').style.display='flex'}
+function openSheet(m){configure(m);const b=document.querySelector('.message-bubble[data-message-id="'+CSS.escape(String(m._id))+'"]');if(b){b.dataset.blogifyForceOpen='1';b.click()}}
+function closeSheet(){$('overlay')?.classList.remove('open');$('actionSheet')?.classList.remove('open');selectedMessage=null;window.__BLOGIFY_SELECTED_MESSAGE=null}
+function bindActions(){const sheet=$('actionSheet');if(!sheet)return;const bind=(id,fn)=>{const b=$(id);if(!b||b.dataset.liveBound)return;b.dataset.liveBound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();fn(e)},true)};bind('deleteForMeAction',()=>{if(!selectedMessage||!conversationId)return;if(confirm('Delete this message for you?')&&emit('message:deleteForMe',{conversationId,messageId:selectedMessage._id}))closeSheet()});bind('unsendAction',()=>{if(!selectedMessage||!conversationId)return;if(confirm('Unsend this message for everyone?')&&emit('message:unsend',{conversationId,messageId:selectedMessage._id}))closeSheet()});bind('editAction',()=>startEditing(selectedMessage))}
+function bindEditSubmit(){const form=$('composer'),input=$('messageInput');if(!form||form.dataset.liveEditBound)return;form.dataset.liveEditBound='1';form.addEventListener('submit',e=>{if(!editingMessageId)return;e.preventDefault();e.stopImmediatePropagation();const text=input.value.trim();if(!text)return toast('Enter a message');ensureConversation().then(()=>{if(Date.now()-Number(window.__BLOGIFY_EDIT_STARTED_AT||Date.now())>=EDIT_MS)return toast('Edit time has expired.');if(emit('message:edit',{conversationId,messageId:editingMessageId,text})){editingMessageId=null;window.__BLOGIFY_EDIT_STARTED_AT=null;input.classList.remove('blogify-editing');input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));toast('Message updated live')}}).catch(err=>toast(err.message))},true)}
+function bindInteractions(){const area=$('messagesArea');if(!area||area.dataset.liveActionsBound)return;area.dataset.liveActionsBound='1';let timer=null,start=null;area.addEventListener('pointerdown',e=>{const b=e.target.closest('.message-bubble[data-message-id]');if(!b)return;start={x:e.clientX,y:e.clientY,b};clearTimeout(timer);timer=setTimeout(async()=>{try{const m=await getMessage(b.dataset.messageId);if(m){navigator.vibrate?.(10);openSheet(m)}}catch(err){toast(err.message)}},HOLD_MS)},true);area.addEventListener('pointermove',e=>{if(start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)>MOVE_PX){clearTimeout(timer);timer=null;start=null}},true);area.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&start){clearTimeout(timer);timer=null;const b=start.b;start=null;getMessage(b.dataset.messageId).then(m=>m&&openSheet(m)).catch(()=>{})}},true)}
+function bindSocketEvents(){const managers=window.io?.managers||{};for(const k of Object.keys(managers)){const s=managers[k]?.nsps?.['/'];if(!s||s.__blogifyLiveActions)return;s.__blogifyLiveActions=true;s.on('message:deletedForMe',d=>removeRow(d?.messageId));s.on('message:unsent',d=>removeRow(d?.messageId));s.on('message:edited',m=>applyEdited(m));s.on('message:action:error',d=>toast(d?.message||'Message action failed'));s.on('message:new',m=>{if(String(m?.conversationId)!==String(conversationId))return;const b=document.querySelector('.message-bubble[data-message-id="'+CSS.escape(String(m?._id||''))+'"]');if(b){const c=window.__BLOGIFY_MESSAGE_CACHE||new Map();const r=m.replyTo&&typeof m.replyTo==='object'?m.replyTo:c.get(String(m.replyTo));decorateBubble(b,{...m,replyTo:r||m.replyTo},c)}})}}
+function refreshEditStates(){document.querySelectorAll('.message-bubble[data-message-id]').forEach(b=>{const m=window.__BLOGIFY_MESSAGE_CACHE?.get(String(b.dataset.messageId));if(m)addInlineEdit(b,m)});if(editingMessageId){const m=window.__BLOGIFY_MESSAGE_CACHE?.get(String(editingMessageId));if(m&&!canEdit(m)){editingMessageId=null;window.__BLOGIFY_EDIT_STARTED_AT=null;$('messageInput')?.classList.remove('blogify-editing');toast('Edit time has expired.')}}}
+function setup(){styles();bindInteractions();bindActions();bindEditSubmit();bindSocketEvents();hydrate();setInterval(()=>{bindActions();bindEditSubmit();bindSocketEvents();refreshEditStates()},1000)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();new MutationObserver(()=>{bindInteractions();bindSocketEvents();setTimeout(hydrate,120)}).observe(document.body,{childList:true,subtree:true});
 })();
