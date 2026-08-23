@@ -93,6 +93,16 @@
     document.body.appendChild(viewer);
   }
 
+  function messageType(m){return m?.mediaType||'text';}
+
+  function downloadMedia(url,filename){
+    if(!/^https:\/\//i.test(String(url||'')))return toast('Media URL is unavailable');
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.rel='noopener';a.target='_blank';
+    document.body.appendChild(a);a.click();a.remove();
+    toast('Download started');
+  }
+
   async function getMessageById(id){
     if(!id)throw Error('Message unavailable');
     let cid=conversationId||window.__BLOGIFY_CONVERSATION_ID;
@@ -133,6 +143,13 @@
 
     const deleteForMe=ensureButton('deleteForMeAction','Delete for me','fas fa-trash-alt','unsendAction');
     const forward=ensureButton('forwardShareAction','Forward / Share','fas fa-share','replyAction');
+    const save=ensureButton('saveAction','Save','fas fa-bookmark','forwardShareAction');
+    const view=ensureButton('viewMediaAction','View photo','fas fa-image','replyAction');
+    const playVideo=ensureButton('playVideoAction','Play video','fas fa-play','replyAction');
+    const playAudio=ensureButton('playAudioAction','Play voice message','fas fa-play','replyAction');
+    const download=ensureButton('downloadMediaAction','Download','fas fa-download','replyAction');
+    const openProfile=ensureButton('openProfileAction','Open profile','fas fa-user','replyAction');
+    const copyProfile=ensureButton('copyProfileAction','Copy profile link','fas fa-link','replyAction');
     const unsend=$('unsendAction');
     if(unsend)unsend.innerHTML='<i class="fas fa-trash" aria-hidden="true"></i><span>Unsend for everyone</span>';
 
@@ -182,6 +199,40 @@
       closeSheet();
     });
 
+    bind('saveAction',()=>{
+      const m=selectedMessage;
+      if(m&&conversationId&&emit('message:save',{conversationId,messageId:m._id}))closeSheet();
+    });
+
+    bind('viewMediaAction',()=>{showMedia(selectedMessage);closeSheet()});
+    bind('playVideoAction',()=>{showMedia(selectedMessage);closeSheet()});
+    bind('playAudioAction',()=>{
+      const m=selectedMessage;
+      const row=document.querySelector('.message-row[data-id="'+CSS.escape(String(m?._id||''))+'"]');
+      const audio=row?.querySelector('audio');
+      if(audio)audio.paused?audio.play().catch(()=>{}):audio.pause();
+      closeSheet();
+    });
+    bind('downloadMediaAction',()=>{
+      const m=selectedMessage;
+      const type=messageType(m);
+      const ext=type==='image'?'jpg':type==='video'?'mp4':'webm';
+      downloadMedia(m?.mediaUrl,'blogify-'+type+'-'+String(m?._id||'message')+'.'+ext);
+      closeSheet();
+    });
+    bind('openProfileAction',()=>{
+      const m=selectedMessage;
+      const id=typeof m?.profileShareId==='object'?m.profileShareId?._id:m?.profileShareId;
+      if(id)location.href='/profile/'+encodeURIComponent(id);
+    });
+    bind('copyProfileAction',async()=>{
+      const m=selectedMessage;
+      const id=typeof m?.profileShareId==='object'?m.profileShareId?._id:m?.profileShareId;
+      if(!id)return toast('Profile unavailable');
+      try{await navigator.clipboard.writeText(location.origin+'/profile/'+id);toast('Profile link copied')}catch(_){toast('Unable to copy profile link')}
+      closeSheet();
+    });
+
     const edit=$('editAction');
     if(edit&&!edit.dataset.blogifyEnhancedEdit){
       edit.dataset.blogifyEnhancedEdit='1';
@@ -209,12 +260,26 @@
     const reply=$('replyAction');
     const copy=$('copyAction');
     const forward=$('forwardShareAction');
+    const save=$('saveAction');
+    const view=$('viewMediaAction');
+    const playVideo=$('playVideoAction');
+    const playAudio=$('playAudioAction');
+    const download=$('downloadMediaAction');
+    const openProfile=$('openProfileAction');
+    const copyProfile=$('copyProfileAction');
     if(deleteForMe)deleteForMe.style.display=m?.deleted?'none':'flex';
     if(unsend)unsend.style.display=mine&&!m?.deleted?'flex':'none';
     if(edit)edit.style.display=canEdit(m)?'flex':'none';
     if(reply)reply.style.display=m?.deleted?'none':'flex';
     if(copy)copy.style.display=m?.text?'flex':'none';
     if(forward)forward.style.display=m?.deleted?'none':'flex';
+    if(save)save.style.display=m?.deleted?'none':'flex';
+    if(view)view.style.display=m?.mediaType==='image'?'flex':'none';
+    if(playVideo)playVideo.style.display=m?.mediaType==='video'?'flex':'none';
+    if(playAudio)playAudio.style.display=m?.mediaType==='audio'?'flex':'none';
+    if(download)download.style.display=['image','video','audio'].includes(m?.mediaType)?'flex':'none';
+    if(openProfile)openProfile.style.display=m?.mediaType==='profile'?'flex':'none';
+    if(copyProfile)copyProfile.style.display=m?.mediaType==='profile'?'flex':'none';
   }
 
   function openUnified(b){
