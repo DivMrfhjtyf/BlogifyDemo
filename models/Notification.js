@@ -5,7 +5,7 @@ const NotificationSchema = new Schema({
     recipient: { type: Schema.Types.ObjectId, ref: "user", required: true },
     type: {
         type: String,
-        enum: ["comment", "reply", "like", "follow", "follow_request", "mention", "blog_post", "message"],
+        enum: ["comment", "reply", "like", "follow", "follow_request", "follow_request_accepted", "mention", "blog_post", "message"],
         required: true
     },
     title: String,
@@ -21,10 +21,6 @@ const NotificationSchema = new Schema({
 NotificationSchema.index({ recipient: 1, isRead: 1 });
 NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 14 * 24 * 60 * 60 });
 NotificationSchema.index({ recipient: 1, type: 1, messageRef: 1 });
-
-// Web Push delivery is intentionally owned by NotificationService.
-// Keeping delivery out of the Mongoose model prevents duplicate pushes and
-// makes bulk notification creation safe and predictable.
 
 const Notification = mongoose.models.Notification || model("Notification", NotificationSchema);
 module.exports = Notification;
