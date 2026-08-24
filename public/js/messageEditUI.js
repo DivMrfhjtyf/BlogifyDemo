@@ -26,11 +26,27 @@ function enhance(){
 }
 function socket(){try{if(window.__BLOGIFY_CHAT_SOCKET?.connected)return window.__BLOGIFY_CHAT_SOCKET;const managers=window.io?.managers||{};for(const key of Object.keys(managers)){const s=managers[key]?.nsps?.['/'];if(s?.connected){window.__BLOGIFY_CHAT_SOCKET=s;return s}}}catch(_){}return null}
 function toast(m){const e=$('toast');if(e){e.textContent=m;e.classList.add('show');clearTimeout(e.__unsendToast);e.__unsendToast=setTimeout(()=>e.classList.remove('show'),2400)}else console.info('[Blogify]',m)}
+function getUnsendContext(){
+ let m=window.__BLOGIFY_SELECTED_MESSAGE||null;
+ if(!m?._id){
+   const forced=document.querySelector('.message-bubble[data-blogify-force-open="1"][data-message-id]');
+   const bubble=forced||document.querySelector('.message-bubble[data-message-id].selected');
+   if(bubble){
+     const id=bubble.getAttribute('data-message-id');
+     const row=bubble.closest('.message-row');
+     if(id)m={_id:id,senderId:window.__BLOGIFY_MY_ID||null,text:bubble.textContent||'',_domRow:row};
+   }
+ }
+ let cid=window.__BLOGIFY_CONVERSATION_ID||null;
+ if(!cid){const holder=document.querySelector('[data-conversation-id]');cid=holder?.getAttribute('data-conversation-id')||holder?.dataset?.conversationId||null}
+ if(!cid){const p=new URLSearchParams(location.search);cid=p.get('conversationId')||p.get('conversation')||null}
+ return {message:m,conversationId:cid};
+}
 function installUnsend(){
  const b=$('unsendAction');if(!b||b.dataset.unsendFixBound)return;b.dataset.unsendFixBound='1';
  b.addEventListener('click',e=>{
    e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();
-   const m=window.__BLOGIFY_SELECTED_MESSAGE;const cid=window.__BLOGIFY_CONVERSATION_ID||new URLSearchParams(location.search).get('conversation');
+   const ctx=getUnsendContext(),m=ctx.message,cid=ctx.conversationId;
    if(!m?._id||!cid){toast('Message information is unavailable');return}
    if(!confirm('Unsend this message for everyone?'))return;
    const s=socket();if(!s){toast('Chat connection is unavailable');return}
@@ -43,7 +59,7 @@ function installUnsend(){
    const onError=d=>finish(false,d?.message||'Unable to unsend message');
    s.on('message:unsent',onUnsent);s.on('message:action:error',onError);
    timeout=setTimeout(()=>finish(false,'Unsend timed out. Please try again.'),8000);
-   try{s.emit('conversation:join',conversationId);setTimeout(()=>{if(!finished)s.emit('message:unsend',{conversationId,messageId:id})},120)}catch(err){finish(false,'Unable to unsend message')}
+   try{s.emit('conversation:join',conversationId);setTimeout(()=>{if(!finished)s.emit('message:unsend',{conversationId,messageId:id})},150)}catch(err){finish(false,'Unable to unsend message')}
  },true);
 }
 function attach(){
