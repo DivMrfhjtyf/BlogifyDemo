@@ -12,6 +12,7 @@ router.get("/edit", restrictToLoggedInUserOnly, async (req, res) => { try { cons
 router.get("/:userId", async (req, res) => renderProfile(req, res, req.params.userId));
 function videoPosterFromUrl(videoURL) { if (!videoURL || typeof videoURL !== "string") return null; try { const url = new URL(videoURL); if (!url.hostname.includes("cloudinary.com")) return null; url.pathname = url.pathname.replace("/upload/", "/upload/so_0,w_1200,h_700,c_fill/"); url.pathname = url.pathname.replace(/\.(mp4|webm|mov|m4v)$/i, ".jpg"); return url.toString(); } catch (_) { return null; } }
 async function countExistingUsers(ids) { const safeIds = Array.isArray(ids) ? ids : []; if (!safeIds.length) return 0; return User.countDocuments({ _id: { $in: safeIds } }); }
+function hasId(list, id) { return Array.isArray(list) && list.some(value => String(value) === String(id)); }
 async function renderProfile(req, res, userId) {
   try {
     const user = await User.findById(userId).select("fullName bio website location profileImageURL isPrivate followers following blockedUsers theme").lean();
@@ -23,13 +24,28 @@ async function renderProfile(req, res, userId) {
     const isFollower = !!(viewerId && followerIds.some(id => id.toString() === viewerId));
     const canViewPrivateContent = isOwnProfile || !user.isPrivate || isFollower;
     let followState = "none";
-    if (viewerId && !isOwnProfile) { const viewer = await User.findById(viewerId).select("following").lean(); if (viewer?.following?.some(id => id.toString() === user._id.toString())) followState = "following"; else if (user.isPrivate && await FollowRequest.exists({ requester: viewerId, recipient: user._id, status: "pending" })) followState = "requested"; }
+    let followBack = false;
+
+    if (viewerId && !isOwnProfile) {
+      const viewer = await User.findById(viewerId).select("following").lean();
+      const isFollowing = hasId(viewer?.following, user._id);
+      followBack = hasId(user.following, viewerId);
+
+      if (isFollowing) {
+        followState = "following";
+      } else if (user.isPrivate && await FollowRequest.exists({ requester: viewerId, recipient: user._id, status: "pending" })) {
+        followState = "requested";
+      } else if (followBack) {
+        followState = "followback";
+      }
+    }
+
     const publishedFilter = { createdBy: user._id, isDeleted: false, status: { $ne: "draft" } };
     const blogCount = await Blog.countDocuments(publishedFilter);
     const [followerCount, followingCount] = await Promise.all([countExistingUsers(followerIds), countExistingUsers(followingIds)]);
     let blogs = canViewPrivateContent ? await Blog.find(publishedFilter).sort({ createdAt: -1 }).limit(50).lean() : [];
     blogs = blogs.map(blog => ({ ...blog, mediaType: blog.mediaType || "blog", mediaPreviewURL: blog.mediaType === "video" ? (videoPosterFromUrl(blog.videoURL) || blog.coverImageURL || null) : (blog.coverImageURL || null) }));
-    return res.render("profile", { user, blogs, isOwnProfile, isLoggedIn: !!req.user, isFollower, contentLocked: !canViewPrivateContent, followState, followerCount, followingCount, blogCount, theme: user.theme || "system" });
+    return res.render("profile", { user, blogs, isOwnProfile, isLoggedIn: !!req.user, isFollower, contentLocked: !canViewPrivateContent, followState, followBack, followerCount, followingCount, blogCount, theme: user.theme || "system" });
   } catch (error) { console.error("Profile Route Error:", error); return res.status(500).render("error", { error: "Unable to load profile" }); }
 }
 router.use(restrictToLoggedInUserOnly);
