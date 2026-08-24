@@ -2,7 +2,7 @@
 'use strict';
 const EDIT_WINDOW_MS=60000;
 const $=id=>document.getElementById(id);
-let timer=null,originalSend=null;
+let timer=null,originalSend=null,barObserver=null,barPoll=null;
 function style(){
  if($('blogify-edit-ui-style'))return;
  const s=document.createElement('style');s.id='blogify-edit-ui-style';s.textContent=`
@@ -18,16 +18,27 @@ function setSend(send,html,title,aria){
  if(!send)return;
  if(send.innerHTML!==html)send.innerHTML=html;
  if(send.title!==title)send.title=title;
- if(aria){if(send.getAttribute('aria-label')!==aria)send.setAttribute('aria-label',aria)}else send.removeAttribute('aria-label');
+ if(aria){if(send.getAttribute('aria-label')!==aria)send.setAttribute('aria-label',aria)}else if(send.hasAttribute('aria-label'))send.removeAttribute('aria-label');
 }
 function enhance(){
- const bar=$('blogifyEditBar'),composer=$('composer'),send=$('sendButton');if(!bar||!composer)return;style();
+ const bar=$('blogifyEditBar'),composer=$('composer'),send=$('sendButton');if(!bar||!composer)return false;style();
  if(!bar.querySelector('.blogify-edit-countdown')){const title=bar.querySelector('.blogify-edit-title');if(title){const c=document.createElement('span');c.className='blogify-edit-countdown';title.appendChild(c)}}
  const visible=bar.classList.contains('show');composer.classList.toggle('edit-mode',visible);
  if(send){if(!originalSend)originalSend={html:send.innerHTML,title:send.title,aria:send.getAttribute('aria-label')};if(visible)setSend(send,'<i class="fas fa-check"></i>','Update message','Update message');else if(originalSend)setSend(send,originalSend.html,originalSend.title||'Send message',originalSend.aria||null)}
  const countdown=bar.querySelector('.blogify-edit-countdown');
  if(visible){if(!timer)timer=setInterval(()=>{if(!bar.classList.contains('show')){clearInterval(timer);timer=null;return}const started=Number(window.__BLOGIFY_EDIT_STARTED_AT||0),left=Math.max(0,EDIT_WINDOW_MS-(Date.now()-started));if(countdown)countdown.textContent=started?`${Math.ceil(left/1000)}s`:'';if(left<=0){clearInterval(timer);timer=null;if(countdown)countdown.textContent='Expired'}},250)}else if(timer){clearInterval(timer);timer=null}
+ return true;
 }
-function watch(){style();new MutationObserver(enhance).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});enhance()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch,{once:true});else watch();
+function attach(){
+ style();
+ if(enhance()){
+   const bar=$('blogifyEditBar');
+   barObserver=new MutationObserver(enhance);
+   barObserver.observe(bar,{attributes:true,attributeFilter:['class']});
+   return;
+ }
+ let attempts=0;
+ barPoll=setInterval(()=>{attempts++;if(enhance()||attempts>=50){clearInterval(barPoll);barPoll=null;if($('blogifyEditBar')){barObserver=new MutationObserver(enhance);barObserver.observe($('blogifyEditBar'),{attributes:true,attributeFilter:['class']})}}},100);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach,{once:true});else attach();
 })();
