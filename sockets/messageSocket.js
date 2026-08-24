@@ -172,11 +172,21 @@ function setupMessageSocket(io) {
     socket.on("message:unsend", async ({ conversationId, messageId } = {}) => {
       if (!actionLimiter()) return socket.emit("message:action:error", { message: "Too many realtime actions. Please slow down." });
       try {
-        if (!mongoose.Types.ObjectId.isValid(conversationId) || !mongoose.Types.ObjectId.isValid(messageId)) return socket.emit("message:action:error", { message: "Invalid message." });
-        const message = await Message.findOne({ _id: messageId, conversationId, senderId: userId });
+        if (!mongoose.Types.ObjectId.isValid(messageId)) return socket.emit("message:action:error", { message: "Invalid message." });
+        const message = await Message.findOne({ _id: messageId }).select("_id conversationId senderId deleted");
         if (!message) return socket.emit("message:action:error", { message: "Message not found." });
-        message.text = ""; message.mediaUrl = ""; message.mediaType = ""; message.profileShareId = null; message.deleted = true; message.edited = false; await message.save();
-        io.to(`conversation:${conversationId}`).emit("message:unsent", { messageId: message._id.toString(), conversationId: conversationId.toString() });
+        if (message.senderId.toString() !== userId) return socket.emit("message:action:error", { message: "You can only unsend your own messages." });
+        const conversation = await Conversation.findOne({ _id: message.conversationId, participants: userId }).select("_id");
+        if (!conversation) return socket.emit("message:action:error", { message: "You are not a participant in this conversation." });
+        if (message.deleted) return socket.emit("message:action:error", { message: "Message has already been unsent." });
+        message.text = "";
+        message.mediaUrl = "";
+        message.mediaType = "";
+        message.profileShareId = null;
+        message.deleted = true;
+        message.edited = false;
+        await message.save();
+        io.to(`conversation:${conversation._id}`).emit("message:unsent", { messageId: message._id.toString(), conversationId: conversation._id.toString() });
       } catch (e) { console.error("message unsend:", e.message); socket.emit("message:action:error", { message: "Unable to unsend message." }); }
     });
 
