@@ -69,4 +69,32 @@
 
     (function(){ const saved=document.documentElement.dataset.theme || localStorage.getItem('blogify-theme'); const theme=saved || 'system'; const dark=theme==='dark' || (theme==='system' && window.matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.dataset.theme=dark?'dark':'light'; if(theme==='system') window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',e=>document.documentElement.dataset.theme=e.matches?'dark':'light'); })();
 </script>
+<script>
+/* Blogify image reliability: keep broken Cloudinary/media images from disappearing.
+   This runs in capture phase so page-specific inline onerror handlers cannot hide a
+   failed image before the common fallback is applied. */
+(function(){
+  const FALLBACK='/imgs/default.png';
+  const seen=new WeakSet();
+  function isImage(el){return el && el.tagName==='IMG';}
+  function repair(img){
+    if(!isImage(img) || seen.has(img)) return;
+    seen.add(img);
+    img.addEventListener('error',function(e){
+      if(img.dataset.blogifyFallback==='1') return;
+      img.dataset.blogifyFallback='1';
+      img.style.visibility='visible';
+      img.style.display='block';
+      img.src=FALLBACK;
+      e.stopImmediatePropagation();
+    },true);
+  }
+  function scan(root){
+    if(root && root.querySelectorAll) root.querySelectorAll('img').forEach(repair);
+    if(isImage(root)) repair(root);
+  }
+  scan(document);
+  new MutationObserver(mutations=>mutations.forEach(m=>m.addedNodes.forEach(scan))).observe(document.documentElement,{childList:true,subtree:true});
+})();
+</script>
 <script src="/js/messaging-enhancements.js" defer></script>
