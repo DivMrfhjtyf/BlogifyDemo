@@ -21,11 +21,17 @@ function createSocketLimiter(limit, windowMs) {
     return true;
   };
 }
+
 function isSafeMediaUrl(value) {
   if (typeof value !== "string") return false;
   const url = value.trim();
   if (!url || url.length > MAX_MEDIA_URL_LENGTH) return false;
-  try { const parsed = new URL(url); return parsed.protocol === "https:" && Boolean(parsed.hostname); } catch (_) { return false; }
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && Boolean(parsed.hostname);
+  } catch (_) {
+    return false;
+  }
 }
 
 function setupMessageSocket(io) {
@@ -52,10 +58,16 @@ function setupMessageSocket(io) {
       activeChatBySocket.set(socket.id, { userId, conversationId: String(conversationId) });
       return true;
     };
-    socket.on("conversation:join", async (conversationId) => { try { await setActiveConversation(conversationId); } catch (e) { console.error("conversation join:", e.message); } });
-    socket.on("conversation:active", async (conversationId) => { try { await setActiveConversation(conversationId); } catch (e) { console.error("conversation active:", e.message); } });
+
+    socket.on("conversation:join", async (conversationId) => {
+      try { await setActiveConversation(conversationId); } catch (e) { console.error("conversation join:", e.message); }
+    });
+    socket.on("conversation:active", async (conversationId) => {
+      try { await setActiveConversation(conversationId); } catch (e) { console.error("conversation active:", e.message); }
+    });
     socket.on("conversation:leave", (conversationId) => {
-      const state = activeChatBySocket.get(socket.id); if (!state) return;
+      const state = activeChatBySocket.get(socket.id);
+      if (!state) return;
       const target = conversationId ? String(conversationId) : state.conversationId;
       if (target) socket.leave(`conversation:${target}`);
       if (!conversationId || target === state.conversationId) activeChatBySocket.set(socket.id, { userId, conversationId: null });
@@ -63,11 +75,17 @@ function setupMessageSocket(io) {
 
     socket.on("typing:start", async ({ conversationId } = {}) => {
       if (!typingLimiter()) return socket.emit("message:error", { message: "Too many realtime actions. Please slow down." });
-      try { if (!mongoose.Types.ObjectId.isValid(conversationId)) return; if (await Conversation.exists({ _id: conversationId, participants: userId })) socket.to(`conversation:${conversationId}`).emit("typing:start", { userId }); } catch (e) { console.error("typing:start:", e.message); }
+      try {
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) return;
+        if (await Conversation.exists({ _id: conversationId, participants: userId })) socket.to(`conversation:${conversationId}`).emit("typing:start", { userId });
+      } catch (e) { console.error("typing:start:", e.message); }
     });
     socket.on("typing:stop", async ({ conversationId } = {}) => {
       if (!typingLimiter()) return;
-      try { if (!mongoose.Types.ObjectId.isValid(conversationId)) return; if (await Conversation.exists({ _id: conversationId, participants: userId })) socket.to(`conversation:${conversationId}`).emit("typing:stop", { userId }); } catch (e) { console.error("typing:stop:", e.message); }
+      try {
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) return;
+        if (await Conversation.exists({ _id: conversationId, participants: userId })) socket.to(`conversation:${conversationId}`).emit("typing:stop", { userId });
+      } catch (e) { console.error("typing:stop:", e.message); }
     });
 
     socket.on("message:send", async ({ conversationId, text = "", replyTo = null, mediaUrl = "", mediaType = "", profileShareId = null } = {}) => {
@@ -92,21 +110,47 @@ function setupMessageSocket(io) {
         if (!c) return socket.emit("message:error", { message: "Conversation not found." });
         const receiverId = c.participants.find(x => x.toString() !== userId);
         if (!receiverId) return socket.emit("message:error", { message: "Conversation recipient not found." });
-        const [target, sender] = await Promise.all([User.findById(receiverId).select("_id fullName isPrivate followers blockedUsers"), User.findById(userId).select("_id fullName blockedUsers profileImageURL")]);
+        const [target, sender] = await Promise.all([
+          User.findById(receiverId).select("_id fullName isPrivate followers blockedUsers"),
+          User.findById(userId).select("_id fullName blockedUsers profileImageURL")
+        ]);
         if (!target || !sender) return socket.emit("message:error", { message: "User not found." });
         if (target.blockedUsers?.some(x => x.toString() === userId) || sender.blockedUsers?.some(x => x.toString() === receiverId.toString())) return socket.emit("message:error", { message: "You cannot message this user." });
         if (target.isPrivate && !target.followers.some(x => x.toString() === userId)) return socket.emit("message:error", { message: "This account is private. Follow the user before messaging." });
         if (profileShareId && !await User.exists({ _id: profileShareId })) return socket.emit("message:error", { message: "Profile not found." });
         const m = await Message.create({ conversationId, senderId: userId, receiverId, text: cleanText, mediaUrl: validMedia ? cleanMediaUrl : "", mediaType: profileShareId ? "profile" : validMedia ? mediaType : "", profileShareId: profileShareId || null, replyTo: replyMessage?._id || null });
-        c.lastMessage = m._id; c.lastMessageAt = m.createdAt;
-        const livePayload = { _id: m._id, conversationId: m.conversationId, senderId: { _id: sender._id, fullName: sender.fullName, profileImageURL: sender.profileImageURL }, receiverId: m.receiverId, text: m.text, mediaUrl: m.mediaUrl, mediaType: m.mediaType, profileShareId: m.profileShareId, replyTo: m.replyTo, createdAt: m.createdAt, updatedAt: m.updatedAt, status: "delivered" };
-        io.to(`conversation:${conversationId}`).emit("message:new", livePayload); socket.emit("message:sent", livePayload);
+        c.lastMessage = m._id;
+        c.lastMessageAt = m.createdAt;
+        const livePayload = {
+          _id: m._id,
+          conversationId: m.conversationId,
+          senderId: { _id: sender._id, fullName: sender.fullName, profileImageURL: sender.profileImageURL },
+          receiverId: m.receiverId,
+          text: m.text,
+          mediaUrl: m.mediaUrl,
+          mediaType: m.mediaType,
+          profileShareId: m.profileShareId,
+          replyTo: m.replyTo,
+          createdAt: m.createdAt,
+          updatedAt: m.updatedAt,
+          status: "delivered"
+        };
+        io.to(`conversation:${conversationId}`).emit("message:new", livePayload);
+        socket.emit("message:sent", livePayload);
         void c.save().catch(error => console.error("conversation save:", error.message));
         void Message.updateOne({ _id: m._id }, { $set: { status: "delivered" } }).catch(error => console.error("message delivery status:", error.message));
         const notificationText = cleanText ? cleanText.substring(0, 120) : profileShareId ? "Shared a profile" : mediaType === "audio" ? "Sent a voice message" : mediaType === "video" ? "Sent a video" : "Sent a photo";
         const recipientIsInThisChat = [...activeChatBySocket.values()].some(state => state?.userId === receiverId.toString() && state?.conversationId === conversationId.toString());
-        if (!recipientIsInThisChat) void (async () => { try { await NotificationService.createNotification(receiverId, "message", { title: `New message from ${socket.userName || "a user"}`, message: notificationText, actor: userId, messageRef: m._id, conversationId: c._id }); io.to(`user:${receiverId}`).emit("notification:message", { conversationId, senderId: userId, messageId: m._id }); } catch (notificationError) { console.error("message notification:", notificationError.message); } })();
-        else io.to(`user:${receiverId}`).emit("notification:message", { conversationId, senderId: userId, messageId: m._id, pushSuppressed: true });
+        if (!recipientIsInThisChat) {
+          void (async () => {
+            try {
+              await NotificationService.createNotification(receiverId, "message", { title: `New message from ${socket.userName || "a user"}`, message: notificationText, actor: userId, messageRef: m._id, conversationId: c._id });
+              io.to(`user:${receiverId}`).emit("notification:message", { conversationId, senderId: userId, messageId: m._id });
+            } catch (notificationError) { console.error("message notification:", notificationError.message); }
+          })();
+        } else {
+          io.to(`user:${receiverId}`).emit("notification:message", { conversationId, senderId: userId, messageId: m._id, pushSuppressed: true });
+        }
       } catch (e) { console.error("message socket:", e.message); socket.emit("message:error", { message: "Unable to send message" }); }
     });
 
@@ -140,23 +184,13 @@ function setupMessageSocket(io) {
       if (!actionLimiter()) return socket.emit("message:action:error", { message: "Too many realtime actions. Please slow down." });
       try {
         if (!mongoose.Types.ObjectId.isValid(messageId)) return socket.emit("message:action:error", { message: "Invalid message." });
-
-        // The message is the source of truth for its conversation. The old
-        // client could retain a stale conversationId after switching chats,
-        // which incorrectly produced "Conversation not found" even though
-        // the selected message was valid. Derive the conversation from the
-        // message and then authorize the current user against that conversation.
         const message = await Message.findOne({ _id: messageId }).select("_id conversationId");
         if (!message) return socket.emit("message:action:error", { message: "Message not found." });
         const conversation = await Conversation.findOne({ _id: message.conversationId, participants: userId }).select("_id participants");
         if (!conversation) return socket.emit("message:action:error", { message: "You are not a participant in this conversation." });
-
         await Message.updateOne({ _id: message._id, conversationId: conversation._id }, { $addToSet: { deletedFor: userId } });
         socket.emit("message:deletedForMe", { messageId: message._id.toString(), conversationId: conversation._id.toString() });
-      } catch (e) {
-        console.error("message delete for me:", e.message);
-        socket.emit("message:action:error", { message: "Unable to delete message for you." });
-      }
+      } catch (e) { console.error("message delete for me:", e.message); socket.emit("message:action:error", { message: "Unable to delete message for you." }); }
     });
 
     socket.on("message:save", async ({ conversationId, messageId } = {}) => {
@@ -169,7 +203,8 @@ function setupMessageSocket(io) {
         if (!message) return socket.emit("message:action:error", { message: "Message not found." });
         const saved = message.savedBy.some(x => x.toString() === userId);
         if (saved) message.savedBy.pull(userId); else message.savedBy.addToSet(userId);
-        await message.save(); socket.emit("message:saved", { messageId: message._id.toString(), saved: !saved });
+        await message.save();
+        socket.emit("message:saved", { messageId: message._id.toString(), saved: !saved });
       } catch (e) { console.error("message save:", e.message); socket.emit("message:action:error", { message: "Unable to save message." }); }
     });
 
@@ -180,17 +215,38 @@ function setupMessageSocket(io) {
         const allowed = ["❤️", "😂", "😮", "😢", "👍", "😍", "🔥", "👏", "😡", "🙏", "🎉", "💯"];
         if (!allowed.includes(emoji)) return socket.emit("message:action:error", { message: "Unsupported reaction." });
         const message = await Message.findOne({ _id: messageId, conversationId, $or: [{ senderId: userId }, { receiverId: userId }] });
-        if (!message || message.deleted || message.deletedFor?.some(x => x.toString() === userId)) return socket.emit("message:action:error", { message: "Message is unavailable." });
+        if (!message || message.deleted || message.deletedFor?.some(x => x.toString() === userId)) return socket.emit("message:action:error", { message: "Message not found." });
         const existing = message.reactions.find(r => r.userId.toString() === userId);
-        if (existing) { if (existing.emoji === emoji) message.reactions = message.reactions.filter(r => r.userId.toString() !== userId); else existing.emoji = emoji; } else message.reactions.push({ userId, emoji });
-        await message.save(); io.to(`conversation:${conversationId}`).emit("message:reacted", { messageId: message._id.toString(), reactions: message.reactions });
-      } catch (e) { console.error("message react:", e.message); socket.emit("message:action:error", { message: "Unable to react to message." }); }
+        if (existing && existing.emoji === emoji) message.reactions = message.reactions.filter(r => r.userId.toString() !== userId);
+        else if (existing) existing.emoji = emoji;
+        else message.reactions.push({ userId, emoji });
+        await message.save();
+        io.to(`conversation:${conversationId}`).emit("message:reactions", { messageId: message._id.toString(), conversationId: conversationId.toString(), reactions: message.reactions.map(r => ({ userId: r.userId.toString(), emoji: r.emoji })) });
+      } catch (e) { console.error("message reaction:", e.message); socket.emit("message:action:error", { message: "Unable to update reaction." }); }
+    });
+
+    socket.on("message:read", async ({ conversationId } = {}) => {
+      if (!actionLimiter()) return;
+      try {
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) return;
+        const c = await Conversation.findOne({ _id: conversationId, participants: userId }).select("_id participants");
+        if (!c) return;
+        const otherId = c.participants.find(x => x.toString() !== userId);
+        await Message.updateMany({ conversationId, receiverId: userId, isRead: false }, { $set: { isRead: true, status: "read" } });
+        await Notification.updateMany({ recipient: userId, type: "message", actor: otherId, isRead: false }, { $set: { isRead: true } });
+        io.to(`conversation:${conversationId}`).emit("message:read", { conversationId, userId });
+        io.to(`user:${userId}`).emit("message:read", { conversationId, userId });
+      } catch (e) { console.error("message read:", e.message); }
     });
 
     socket.on("disconnect", () => {
       activeChatBySocket.delete(socket.id);
-      const sockets = onlineUsers.get(userId); if (sockets) { sockets.delete(socket.id); if (!sockets.size) { onlineUsers.delete(userId); io.emit("user:offline", { userId }); } }
+      const set = onlineUsers.get(userId);
+      if (!set) return;
+      set.delete(socket.id);
+      if (!set.size) { onlineUsers.delete(userId); io.emit("user:offline", { userId }); }
     });
   });
 }
-module.exports = { setupMessageSocket, onlineUsers, activeChatBySocket };
+
+module.exports = { setupMessageSocket, onlineUsers };
