@@ -1,0 +1,123 @@
+<%- include("./profile") %>
+
+<script>
+(() => {
+  const profileUserId = <%- JSON.stringify(String(user._id)) %>;
+  const isOwnProfile = <%= isOwnProfile ? 'true' : 'false' %>;
+  let followState = <%- JSON.stringify(followState || 'none') %>;
+
+  function followButton() {
+    return document.getElementById('followBtn');
+  }
+
+  function setFollowButton(state, disabled = false) {
+    const button = followButton();
+    if (!button) return;
+    const icon = button.querySelector('i');
+    const text = document.getElementById('followText');
+    followState = state;
+    button.disabled = disabled;
+    button.className = 'btn ' + (state === 'following' ? 'success' : state === 'followback' ? 'primary' : 'secondary');
+    if (icon) icon.className = 'fas ' + (state === 'following' ? 'fa-user-check' : state === 'requested' ? 'fa-clock' : 'fa-user-plus');
+    if (text) text.textContent = state === 'following' ? 'Following' : state === 'requested' ? 'Request sent' : state === 'followback' ? 'Follow back' : 'Follow';
+  }
+
+  async function enhancedToggleFollow() {
+    const button = followButton();
+    if (!button || button.disabled) return;
+    setFollowButton(followState, true);
+    try {
+      const response = await fetch('/follow/' + encodeURIComponent(profileUserId) + '/follow', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update follow');
+      if (data.following) setFollowButton('following');
+      else if (data.requested) setFollowButton('requested');
+      else if (data.followBack) setFollowButton('followback');
+      else setFollowButton('none');
+      if (data.followerCount != null) {
+        const count = document.getElementById('followerCount');
+        if (count) count.textContent = String(data.followerCount);
+      }
+      if (data.followingCount != null && isOwnProfile) {
+        const count = document.getElementById('followingCount');
+        if (count) count.textContent = String(data.followingCount);
+      }
+      if (typeof window.toast === 'function') window.toast(data.message || 'Follow status updated');
+      else if (window.notify?.success) window.notify.success(data.message || 'Follow status updated');
+    } catch (error) {
+      setFollowButton(followState);
+      if (typeof window.toast === 'function') window.toast(error.message || 'Unable to update follow');
+      else if (window.notify?.error) window.notify.error(error.message || 'Unable to update follow');
+    }
+  }
+
+  window.toggleFollow = enhancedToggleFollow;
+  setFollowButton(followState);
+
+  function addRemoveFollowerButtons() {
+    if (!isOwnProfile) return;
+    const box = document.getElementById('followersContent');
+    if (!box) return;
+    box.querySelectorAll('.person').forEach(card => {
+      if (card.querySelector('[data-remove-follower]')) return;
+      const profileLink = card.querySelector('a[href*="/user/profile/"]');
+      if (!profileLink) return;
+      const match = profileLink.getAttribute('href').match(/\/user\/profile\/([^/?#]+)/);
+      if (!match) return;
+      const followerId = decodeURIComponent(match[1]);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn secondary';
+      button.dataset.removeFollower = followerId;
+      button.style.cssText = 'margin-top:8px;width:100%;justify-content:center;';
+      button.innerHTML = '<i class="fas fa-user-minus"></i> Remove follower';
+      card.appendChild(button);
+    });
+  }
+
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-remove-follower]');
+    if (!button || !isOwnProfile) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (button.disabled) return;
+    const followerId = button.dataset.removeFollower;
+    button.disabled = true;
+    const oldHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing…';
+    try {
+      const response = await fetch('/follow/' + encodeURIComponent(followerId) + '/remove-follower', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) throw new Error(data.message || 'Unable to remove follower');
+      button.closest('.person')?.remove();
+      const count = document.getElementById('followerCount');
+      if (count && data.followerCount != null) count.textContent = String(data.followerCount);
+      if (typeof window.toast === 'function') window.toast(data.message || 'Follower removed');
+      else if (window.notify?.success) window.notify.success(data.message || 'Follower removed');
+    } catch (error) {
+      button.disabled = false;
+      button.innerHTML = oldHtml;
+      if (typeof window.toast === 'function') window.toast(error.message || 'Unable to remove follower');
+      else if (window.notify?.error) window.notify.error(error.message || 'Unable to remove follower');
+    }
+  });
+
+  const startObserver = () => {
+    const box = document.getElementById('followersContent');
+    if (!box) return;
+    const observer = new MutationObserver(addRemoveFollowerButtons);
+    observer.observe(box, { childList: true, subtree: true });
+    addRemoveFollowerButtons();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver, { once: true });
+  else startObserver();
+})();
+</script>
