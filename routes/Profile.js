@@ -45,7 +45,7 @@ async function renderProfile(req, res, userId) {
     const [followerCount, followingCount] = await Promise.all([countExistingUsers(followerIds), countExistingUsers(followingIds)]);
     let blogs = canViewPrivateContent ? await Blog.find(publishedFilter).sort({ createdAt: -1 }).limit(50).lean() : [];
     blogs = blogs.map(blog => ({ ...blog, mediaType: blog.mediaType || "blog", mediaPreviewURL: blog.mediaType === "video" ? (videoPosterFromUrl(blog.videoURL) || blog.coverImageURL || null) : (blog.coverImageURL || null) }));
-    return res.render("profile", { user, blogs, isOwnProfile, isLoggedIn: !!req.user, isFollower, contentLocked: !canViewPrivateContent, followState, followBack, followerCount, followingCount, blogCount, theme: user.theme || "system" });
+    return res.render("profileEnhanced", { user, blogs, isOwnProfile, isLoggedIn: !!req.user, isFollower, contentLocked: !canViewPrivateContent, followState, followBack, followerCount, followingCount, blogCount, theme: user.theme || "system" });
   } catch (error) { console.error("Profile Route Error:", error); return res.status(500).render("error", { error: "Unable to load profile" }); }
 }
 router.use(restrictToLoggedInUserOnly);
