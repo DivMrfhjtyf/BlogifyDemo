@@ -26,58 +26,13 @@ function enhance(){
 }
 function socket(){try{if(window.__BLOGIFY_CHAT_SOCKET?.connected)return window.__BLOGIFY_CHAT_SOCKET;const managers=window.io?.managers||{};for(const key of Object.keys(managers)){const s=managers[key]?.nsps?.['/'];if(s?.connected){window.__BLOGIFY_CHAT_SOCKET=s;return s}}}catch(_){}return null}
 function toast(m){const e=$('toast');if(e){e.textContent=m;e.classList.add('show');clearTimeout(e.__unsendToast);e.__unsendToast=setTimeout(()=>e.classList.remove('show'),2400)}else console.info('[Blogify]',m)}
-function rememberMessageTarget(e){
- const bubble=e?.target?.closest?.('.message-bubble[data-message-id]');
- if(!bubble)return;
- const id=bubble.getAttribute('data-message-id');
- if(id){lastMessageId=String(id);window.__BLOGIFY_SELECTED_MESSAGE_ID=String(id);window.__BLOGIFY_SELECTED_MESSAGE_ELEMENT=bubble.closest('.message-row')||null}
-}
-function resolveCachedMessage(id){
- if(!id)return null;
- const cache=window.__BLOGIFY_MESSAGE_CACHE;
- if(cache?.get){const m=cache.get(String(id));if(m)return m}
- const forced=document.querySelector('.message-bubble[data-message-id="'+CSS.escape(String(id))+'"]');
- if(forced)return {_id:String(id),text:forced.textContent||'',senderId:window.__BLOGIFY_MY_ID||null};
- return null;
-}
-function getUnsendContext(){
- let m=window.__BLOGIFY_SELECTED_MESSAGE||null;
- const id=String(m?._id||window.__BLOGIFY_SELECTED_MESSAGE_ID||lastMessageId||'');
- if(!m?._id)m=resolveCachedMessage(id);
- let cid=window.__BLOGIFY_CONVERSATION_ID||null;
- if(!cid){const holder=document.querySelector('[data-conversation-id]');cid=holder?.getAttribute('data-conversation-id')||holder?.dataset?.conversationId||null}
- if(!cid){const p=new URLSearchParams(location.search);cid=p.get('conversationId')||p.get('conversation')||p.get('user')||null}
- return {message:m,conversationId:cid};
-}
-function installUnsend(){
- const b=$('unsendAction');if(!b||b.dataset.unsendFixBound)return;b.dataset.unsendFixBound='1';
- b.addEventListener('click',async e=>{
-   e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();
-   const ctx=getUnsendContext(),m=ctx.message,cid=ctx.conversationId;
-   if(!m?._id||!cid){toast('Message information is unavailable');return}
-   if(!confirm('Unsend this message for everyone?'))return;
-   const s=socket();if(!s){toast('Chat connection is unavailable');return}
-   const id=String(m._id),conversationId=String(cid);b.disabled=true;
-   const label=b.querySelector('span'),old=label?.textContent||'Unsend';if(label)label.textContent='Unsending…';
-   let finished=false,timeout;
-   const cleanup=()=>{clearTimeout(timeout);s.off('message:unsent',onUnsent);s.off('message:action:error',onError)};
-   const finish=(ok,msg)=>{if(finished)return;finished=true;cleanup();b.disabled=false;if(label)label.textContent=old;toast(msg);if(ok){document.querySelector('.message-row[data-id="'+CSS.escape(id)+'"]')?.remove();$('overlay')?.classList.remove('open');$('actionSheet')?.classList.remove('open');window.__BLOGIFY_SELECTED_MESSAGE=null;window.__BLOGIFY_SELECTED_MESSAGE_ID=null;lastMessageId=null}};
-   const onUnsent=d=>{if(String(d?.messageId||'')===id)finish(true,'Message unsent for everyone')};
-   const onError=d=>finish(false,d?.message||'Unable to unsend message');
-   s.on('message:unsent',onUnsent);s.on('message:action:error',onError);
-   timeout=setTimeout(()=>finish(false,'Unsend timed out. Please try again.'),8000);
-   try{s.emit('conversation:join',conversationId);setTimeout(()=>{if(!finished)s.emit('message:unsend',{conversationId,messageId:id})},150)}catch(err){finish(false,'Unable to unsend message')}
- },true);
-}
-function attach(){
- style();
- document.addEventListener('pointerdown',rememberMessageTarget,true);
- document.addEventListener('click',rememberMessageTarget,true);
- installUnsend();
- if(enhance()){
-   const bar=$('blogifyEditBar');barObserver=new MutationObserver(enhance);barObserver.observe(bar,{attributes:true,attributeFilter:['class']});return;
- }
- let attempts=0;barPoll=setInterval(()=>{attempts++;installUnsend();if(enhance()||attempts>=50){clearInterval(barPoll);barPoll=null;if($('blogifyEditBar')){barObserver=new MutationObserver(enhance);barObserver.observe($('blogifyEditBar'),{attributes:true,attributeFilter:['class']})}}},100);
-}
+function rememberMessageTarget(e){const bubble=e?.target?.closest?.('.message-bubble[data-message-id]');if(!bubble)return;const id=bubble.getAttribute('data-message-id');if(id){lastMessageId=String(id);window.__BLOGIFY_SELECTED_MESSAGE_ID=String(id);window.__BLOGIFY_SELECTED_MESSAGE_ELEMENT=bubble.closest('.message-row')||null}}
+function resolveCachedMessage(id){if(!id)return null;const cache=window.__BLOGIFY_MESSAGE_CACHE;if(cache?.get){const m=cache.get(String(id));if(m)return m}const forced=document.querySelector('.message-bubble[data-message-id="'+CSS.escape(String(id))+'"]');if(forced)return {_id:String(id),text:forced.textContent||'',senderId:window.__BLOGIFY_MY_ID||null};return null}
+function getUnsendContext(){let m=window.__BLOGIFY_SELECTED_MESSAGE||null;const id=String(m?._id||window.__BLOGIFY_SELECTED_MESSAGE_ID||lastMessageId||'');if(!m?._id)m=resolveCachedMessage(id);let cid=window.__BLOGIFY_CONVERSATION_ID||null;if(!cid){const holder=document.querySelector('[data-conversation-id]');cid=holder?.getAttribute('data-conversation-id')||holder?.dataset?.conversationId||null}if(!cid){const p=new URLSearchParams(location.search);cid=p.get('conversationId')||p.get('conversation')||p.get('user')||null}return {message:m,conversationId:cid}}
+function getDeleteContext(){let m=window.__BLOGIFY_SELECTED_MESSAGE||null;const id=String(m?._id||window.__BLOGIFY_SELECTED_MESSAGE_ID||lastMessageId||'');if(!m?._id)m=resolveCachedMessage(id);let cid=window.__BLOGIFY_CONVERSATION_ID||null;if(!cid){const holder=document.querySelector('[data-conversation-id]');cid=holder?.getAttribute('data-conversation-id')||holder?.dataset?.conversationId||null}if(!cid){const p=new URLSearchParams(location.search);cid=p.get('conversationId')||p.get('conversation')||p.get('user')||null}return {message:m,conversationId:cid}}
+function closeSheet(){document.getElementById('overlay')?.classList.remove('open');document.getElementById('actionSheet')?.classList.remove('open');window.__BLOGIFY_SELECTED_MESSAGE=null;window.__BLOGIFY_SELECTED_MESSAGE_ID=null;document.querySelectorAll('[data-blogify-force-open="1"]').forEach(e=>e.removeAttribute('data-blogify-force-open'));lastMessageId=null}
+function installDeleteForMe(){const sheet=$('actionSheet');if(!sheet||sheet.dataset.deleteMeFixBound)return;sheet.dataset.deleteMeFixBound='1';let b=$('deleteForMeAction');if(!b){b=document.createElement('button');b.type='button';b.id='deleteForMeAction';b.className='sheet-btn danger';b.innerHTML='<i class="fas fa-trash-alt"></i><span>Delete for me</span>';const unsend=$('unsendAction');sheet.insertBefore(b,unsend||null)}b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();const ctx=getDeleteContext(),m=ctx.message,cid=ctx.conversationId;if(!m?._id||!cid){toast('Message information is unavailable');return}if(!confirm('Delete this message for you?'))return;const s=socket();if(!s){toast('Chat connection is unavailable');return}const id=String(m._id),conversationId=String(cid);b.disabled=true;const label=b.querySelector('span'),old=label?.textContent||'Delete for me';if(label)label.textContent='Deleting…';let finished=false,timeout;const cleanup=()=>{clearTimeout(timeout);s.off('message:deletedForMe',onDeleted);s.off('message:action:error',onError)};const finish=(ok,msg)=>{if(finished)return;finished=true;cleanup();b.disabled=false;if(label)label.textContent=old;toast(msg);if(ok){document.querySelector('.message-row[data-id="'+CSS.escape(id)+'"]')?.remove();closeSheet()}};const onDeleted=d=>{if(String(d?.messageId||'')===id)finish(true,'Message deleted for you')};const onError=d=>finish(false,d?.message||'Unable to delete message');s.on('message:deletedForMe',onDeleted);s.on('message:action:error',onError);timeout=setTimeout(()=>finish(false,'Delete timed out. Please try again.'),8000);try{s.emit('conversation:join',conversationId);setTimeout(()=>{if(!finished)s.emit('message:deleteForMe',{conversationId,messageId:id})},100)}catch(err){finish(false,'Unable to delete message')}},true)}
+function installUnsend(){const b=$('unsendAction');if(!b||b.dataset.unsendFixBound)return;b.dataset.unsendFixBound='1';b.addEventListener('click',async e=>{e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();const ctx=getUnsendContext(),m=ctx.message,cid=ctx.conversationId;if(!m?._id||!cid){toast('Message information is unavailable');return}if(!confirm('Unsend this message for everyone?'))return;const s=socket();if(!s){toast('Chat connection is unavailable');return}const id=String(m._id),conversationId=String(cid);b.disabled=true;const label=b.querySelector('span'),old=label?.textContent||'Unsend';if(label)label.textContent='Unsending…';let finished=false,timeout;const cleanup=()=>{clearTimeout(timeout);s.off('message:unsent',onUnsent);s.off('message:action:error',onError)};const finish=(ok,msg)=>{if(finished)return;finished=true;cleanup();b.disabled=false;if(label)label.textContent=old;toast(msg);if(ok){document.querySelector('.message-row[data-id="'+CSS.escape(id)+'"]')?.remove();$('overlay')?.classList.remove('open');$('actionSheet')?.classList.remove('open');window.__BLOGIFY_SELECTED_MESSAGE=null;window.__BLOGIFY_SELECTED_MESSAGE_ID=null;lastMessageId=null}};const onUnsent=d=>{if(String(d?.messageId||'')===id)finish(true,'Message unsent for everyone')};const onError=d=>finish(false,d?.message||'Unable to unsend message');s.on('message:unsent',onUnsent);s.on('message:action:error',onError);timeout=setTimeout(()=>finish(false,'Unsend timed out. Please try again.'),8000);try{s.emit('conversation:join',conversationId);setTimeout(()=>{if(!finished)s.emit('message:unsend',{conversationId,messageId:id})},150)}catch(err){finish(false,'Unable to unsend message')}},true)}
+function attach(){style();document.addEventListener('pointerdown',rememberMessageTarget,true);document.addEventListener('click',rememberMessageTarget,true);installDeleteForMe();installUnsend();if(enhance()){const bar=$('blogifyEditBar');barObserver=new MutationObserver(enhance);barObserver.observe(bar,{attributes:true,attributeFilter:['class']});return}let attempts=0;barPoll=setInterval(()=>{attempts++;installDeleteForMe();installUnsend();if(enhance()||attempts>=50){clearInterval(barPoll);barPoll=null;if($('blogifyEditBar')){barObserver=new MutationObserver(enhance);barObserver.observe($('blogifyEditBar'),{attributes:true,attributeFilter:['class']})}}},100)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach,{once:true});else attach();
 })();
