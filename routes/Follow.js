@@ -12,6 +12,10 @@ function validObjectId(value) {
   return mongoose.Types.ObjectId.isValid(String(value || ""));
 }
 
+function hasId(list, id) {
+  return Array.isArray(list) && list.some(value => String(value) === String(id));
+}
+
 async function notifyRequest(recipient, requester, requestId) {
   try {
     await NotificationService.createNotification(recipient._id, "follow_request", {
@@ -37,8 +41,7 @@ async function notifyAccepted(requester, recipient) {
   }
 }
 
-// Keep the two sides of a follow relationship synchronized. $addToSet makes
-// this safe to call repeatedly and prevents duplicate ObjectIds.
+// Keep both sides synchronized. $addToSet prevents duplicate ObjectIds.
 async function syncFollow(requesterId, recipientId) {
   await Promise.all([
     User.findByIdAndUpdate(requesterId, { $addToSet: { following: recipientId } }),
@@ -46,8 +49,6 @@ async function syncFollow(requesterId, recipientId) {
   ]);
 }
 
-// Count only user documents that still exist. This prevents stale ObjectIds
-// in followers/following arrays from making profile counts disagree with lists.
 async function countsFor(userId) {
   const user = await User.findById(userId).select("followers following").lean();
   if (!user) return { followerCount: 0, followingCount: 0 };
@@ -61,6 +62,23 @@ async function countsFor(userId) {
   ]);
 
   return { followerCount, followingCount };
+}
+
+async function relationshipFor(viewerId, targetUser) {
+  const viewer = await User.findById(viewerId).select("followers following").lean();
+  const following = hasId(viewer?.following, targetUser._id);
+  const followBack = hasId(targetUser.following, viewerId);
+  let requested = false;
+
+  if (!following) {
+    requested = !!await FollowRequest.exists({
+      requester: viewerId,
+      recipient: targetUser._id,
+      status: "pending"
+    });
+  }
+
+  return { following, followBack, requested };
 }
 
 router.post("/:userId/follow", async (req, res) => {
@@ -77,36 +95,95 @@ router.post("/:userId/follow", async (req, res) => {
     if (!currentUser || !targetUser) return res.status(404).json({ success: false, message: "User not found" });
     if (currentUser.isDeactivated || targetUser.isDeactivated) return res.status(404).json({ success: false, message: "User not found" });
 
+    // Unfollow is always one-directional. Do not remove the other user's
+    // following relationship when they still follow the current user.
     if (currentUser.isFollowing(userId)) {
       await Promise.all([
         User.findByIdAndUpdate(currentUserId, { $pull: { following: userId } }),
         User.findByIdAndUpdate(userId, { $pull: { followers: currentUserId } }),
+        // A pending request cannot coexist with an active follow relationship.
         FollowRequest.deleteMany({ requester: currentUserId, recipient: userId, status: "pending" })
       ]);
-      const [meCounts, targetCounts] = await Promise.all([countsFor(currentUserId), countsFor(userId)]);
-      return res.json({ success: true, following: false, requested: false, followerCount: targetCounts.followerCount, followingCount: meCounts.followingCount, message: "Unfollowed successfully" });
+
+      const [meCounts, targetCounts, targetAfter] = await Promise.all([
+        countsFor(currentUserId),
+        countsFor(userId),
+        User.findById(userId).select("following").lean()
+      ]);
+      const followBack = hasId(targetAfter?.following, currentUserId);
+
+      return res.json({
+        success: true,
+        following: false,
+        requested: false,
+        followBack,
+        followerCount: targetCounts.followerCount,
+        followingCount: meCounts.followingCount,
+        message: "Unfollowed successfully"
+      });
     }
 
     if (targetUser.isPrivate) {
-      const existing = await FollowRequest.findOne({ requester: currentUserId, recipient: userId });
-      if (existing?.status === "accepted") {
-        await syncFollow(currentUserId, userId);
-        const [meCounts, targetCounts] = await Promise.all([countsFor(currentUserId), countsFor(userId)]);
-        return res.json({ success: true, following: true, requested: false, followerCount: targetCounts.followerCount, followingCount: meCounts.followingCount, message: "Already following" });
-      }
+      // An accepted request is historical data. It must NOT automatically
+      // recreate a follow after the relationship was later unfollowed.
+      // If the relationship is no longer active, the same request document
+      // is safely recycled into a fresh pending request.
+      const existing = await FollowRequest.findOne({
+        requester: currentUserId,
+        recipient: userId
+      });
+
       if (existing?.status === "pending") {
-        const [meCounts, targetCounts] = await Promise.all([countsFor(currentUserId), countsFor(userId)]);
-        return res.json({ success: true, following: false, requested: true, followerCount: targetCounts.followerCount, followingCount: meCounts.followingCount, message: "Follow request already pending" });
+        const [meCounts, targetCounts] = await Promise.all([
+          countsFor(currentUserId),
+          countsFor(userId)
+        ]);
+        return res.json({
+          success: true,
+          following: false,
+          requested: true,
+          followBack: hasId(targetUser.following, currentUserId),
+          followerCount: targetCounts.followerCount,
+          followingCount: meCounts.followingCount,
+          message: "Follow request already pending"
+        });
       }
 
       const request = await FollowRequest.findOneAndUpdate(
         { requester: currentUserId, recipient: userId },
-        { $set: { status: "pending", respondedAt: null } },
+        {
+          $set: {
+            status: "pending",
+            respondedAt: null,
+            createdAt: new Date()
+          },
+          $setOnInsert: {
+            requester: currentUserId,
+            recipient: userId
+          }
+        },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
+
       await notifyRequest(targetUser, currentUser, request._id);
-      const [meCounts, targetCounts] = await Promise.all([countsFor(currentUserId), countsFor(userId)]);
-      return res.json({ success: true, following: false, requested: true, followerCount: targetCounts.followerCount, followingCount: meCounts.followingCount, message: "Follow request sent" });
+
+      const [meCounts, targetCounts] = await Promise.all([
+        countsFor(currentUserId),
+        countsFor(userId)
+      ]);
+
+      return res.json({
+        success: true,
+        following: false,
+        requested: true,
+        followBack: hasId(targetUser.following, currentUserId),
+        followerCount: targetCounts.followerCount,
+        followingCount: meCounts.followingCount,
+        requestId: request._id,
+        message: existing?.status === "rejected" || existing?.status === "accepted"
+          ? "Follow request sent again"
+          : "Follow request sent"
+      });
     }
 
     await syncFollow(currentUserId, userId);
@@ -119,11 +196,48 @@ router.post("/:userId/follow", async (req, res) => {
       });
     } catch (e) {}
 
-    const [meCounts, targetCounts] = await Promise.all([countsFor(currentUserId), countsFor(userId)]);
-    return res.json({ success: true, following: true, requested: false, followerCount: targetCounts.followerCount, followingCount: meCounts.followingCount, message: "Followed successfully" });
+    const [meCounts, targetCounts] = await Promise.all([
+      countsFor(currentUserId),
+      countsFor(userId)
+    ]);
+
+    return res.json({
+      success: true,
+      following: true,
+      requested: false,
+      followBack: hasId(targetUser.following, currentUserId),
+      followerCount: targetCounts.followerCount,
+      followingCount: meCounts.followingCount,
+      message: "Followed successfully"
+    });
   } catch (error) {
     console.error("Follow error:", error);
     return res.status(500).json({ success: false, message: "Failed to update follow status" });
+  }
+});
+
+// Return the complete directional relationship state for profile UIs.
+router.get("/:userId/state", async (req, res) => {
+  try {
+    if (!validObjectId(req.params.userId)) return res.status(400).json({ success: false, message: "Invalid user" });
+    if (String(req.params.userId) === String(req.user._id)) {
+      return res.json({ success: true, self: true, following: false, requested: false, followBack: false });
+    }
+
+    const targetUser = await User.findById(req.params.userId)
+      .select("_id isPrivate followers following isDeactivated")
+      .lean();
+    if (!targetUser || targetUser.isDeactivated) return res.status(404).json({ success: false, message: "User not found" });
+
+    const state = await relationshipFor(req.user._id, targetUser);
+    return res.json({
+      success: true,
+      isPrivate: !!targetUser.isPrivate,
+      ...state
+    });
+  } catch (error) {
+    console.error("Follow state error:", error);
+    return res.status(500).json({ success: false, message: "Failed to load follow state" });
   }
 });
 
@@ -166,9 +280,6 @@ router.post("/requests/:requestId/accept", async (req, res) => {
       return res.status(404).json({ success: false, message: "User is no longer available" });
     }
 
-    // First synchronize both user documents, then mark the request accepted.
-    // This avoids the old state where the request was accepted but the
-    // requester/recipient follower arrays were not both updated.
     await syncFollow(request.requester, request.recipient);
     await FollowRequest.findByIdAndUpdate(request._id, {
       $set: { status: "accepted", respondedAt: new Date() }
@@ -186,6 +297,7 @@ router.post("/requests/:requestId/accept", async (req, res) => {
       accepted: true,
       following,
       requested: false,
+      followBack: hasId(requesterAfter?.following, req.user._id),
       followerCount: myCounts.followerCount,
       followingCount: myCounts.followingCount,
       requestId: request._id,
@@ -222,8 +334,6 @@ router.get("/requests", async (req, res) => {
       .populate("requester", "fullName profileImageURL bio")
       .lean();
 
-    // Deleted users can leave old request documents behind. Do not send
-    // null requesters to the browser, where they would break rendering.
     const safeRequests = requests.filter(request => request.requester);
     return res.json({ success: true, requests: safeRequests });
   } catch (error) {
