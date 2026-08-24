@@ -6,6 +6,8 @@ let timer=null,originalSend=null,barObserver=null,barPoll=null,lastMessageId=nul
 function style(){
  if($('blogify-edit-ui-style'))return;
  const s=document.createElement('style');s.id='blogify-edit-ui-style';s.textContent=`
+.blogify-inline-edit{display:flex!important;}
+#editAction{display:none!important;}
 .blogify-edit-bar{min-height:54px!important;padding:8px 12px!important;gap:10px!important;background:var(--surface,#fff)!important;border-top:1px solid var(--line,#e3e3e6)!important;box-shadow:0 -4px 16px rgba(0,0,0,.05)}
 .blogify-edit-icon{width:34px!important;height:34px!important;border-radius:11px!important}.blogify-edit-title{font-size:11px!important;letter-spacing:.1px}.blogify-edit-preview{max-width:70vw!important}
 .blogify-edit-cancel{height:34px!important;border-radius:10px!important;padding:0 10px!important}.blogify-edit-cancel:hover{background:var(--input,#f2f2f4)}
