@@ -1,44 +1,12 @@
 (function(){
 'use strict';
-const EDIT_WINDOW_MS=60000;
-const $=id=>document.getElementById(id);
-let timer=null,originalSend=null,barObserver=null,barPoll=null;
-function style(){
- if($('blogify-edit-ui-style'))return;
- const s=document.createElement('style');s.id='blogify-edit-ui-style';s.textContent=`
-.blogify-edit-bar{min-height:54px!important;padding:8px 12px!important;gap:10px!important;background:var(--surface,#fff)!important;border-top:1px solid var(--line,#e3e3e6)!important;box-shadow:0 -4px 16px rgba(0,0,0,.05)}
-.blogify-edit-icon{width:34px!important;height:34px!important;border-radius:11px!important}.blogify-edit-title{font-size:11px!important;letter-spacing:.1px}.blogify-edit-preview{max-width:70vw!important}
-.blogify-edit-cancel{height:34px!important;border-radius:10px!important;padding:0 10px!important}.blogify-edit-cancel:hover{background:var(--input,#f2f2f4)}
-.blogify-edit-countdown{font-size:9px;color:var(--muted,#737373);margin-left:5px;white-space:nowrap}
-.composer.edit-mode .input-box{border-color:#3797f0!important;box-shadow:0 0 0 2px rgba(55,151,240,.10)}
-.composer.edit-mode .send-btn{display:grid!important;background:#3797f0!important}.composer.edit-mode .send-btn i{font-size:15px}.composer.edit-mode .composer-btn{opacity:.55}
-`;document.head.appendChild(s);
-}
-function setSend(send,html,title,aria){
- if(!send)return;
- if(send.innerHTML!==html)send.innerHTML=html;
- if(send.title!==title)send.title=title;
- if(aria){if(send.getAttribute('aria-label')!==aria)send.setAttribute('aria-label',aria)}else if(send.hasAttribute('aria-label'))send.removeAttribute('aria-label');
-}
-function enhance(){
- const bar=$('blogifyEditBar'),composer=$('composer'),send=$('sendButton');if(!bar||!composer)return false;style();
- if(!bar.querySelector('.blogify-edit-countdown')){const title=bar.querySelector('.blogify-edit-title');if(title){const c=document.createElement('span');c.className='blogify-edit-countdown';title.appendChild(c)}}
- const visible=bar.classList.contains('show');composer.classList.toggle('edit-mode',visible);
- if(send){if(!originalSend)originalSend={html:send.innerHTML,title:send.title,aria:send.getAttribute('aria-label')};if(visible)setSend(send,'<i class="fas fa-check"></i>','Update message','Update message');else if(originalSend)setSend(send,originalSend.html,originalSend.title||'Send message',originalSend.aria||null)}
- const countdown=bar.querySelector('.blogify-edit-countdown');
- if(visible){if(!timer)timer=setInterval(()=>{if(!bar.classList.contains('show')){clearInterval(timer);timer=null;return}const started=Number(window.__BLOGIFY_EDIT_STARTED_AT||0),left=Math.max(0,EDIT_WINDOW_MS-(Date.now()-started));if(countdown)countdown.textContent=started?`${Math.ceil(left/1000)}s`:'';if(left<=0){clearInterval(timer);timer=null;if(countdown)countdown.textContent='Expired'}},250)}else if(timer){clearInterval(timer);timer=null}
- return true;
-}
-function attach(){
- style();
- if(enhance()){
-   const bar=$('blogifyEditBar');
-   barObserver=new MutationObserver(enhance);
-   barObserver.observe(bar,{attributes:true,attributeFilter:['class']});
-   return;
- }
- let attempts=0;
- barPoll=setInterval(()=>{attempts++;if(enhance()||attempts>=50){clearInterval(barPoll);barPoll=null;if($('blogifyEditBar')){barObserver=new MutationObserver(enhance);barObserver.observe($('blogifyEditBar'),{attributes:true,attributeFilter:['class']})}}},100);
-}
+const EDIT_WINDOW_MS=60000,$=id=>document.getElementById(id);let timer=null,originalSend=null;
+function style(){if($('blogify-edit-ui-style'))return;const s=document.createElement('style');s.id='blogify-edit-ui-style';s.textContent=`
+.blogify-inline-edit{display:none!important}.blogify-edit-bar{min-height:54px!important;padding:8px 12px!important;gap:10px!important;background:var(--surface,#fff)!important;border-top:1px solid var(--line,#e3e3e6)!important;box-shadow:0 -4px 16px rgba(0,0,0,.05)}.blogify-edit-icon{width:34px!important;height:34px!important;border-radius:11px!important}.blogify-edit-title{font-size:11px!important;letter-spacing:.1px}.blogify-edit-preview{max-width:70vw!important}.blogify-edit-cancel{height:34px!important;border-radius:10px!important;padding:0 10px!important}.blogify-edit-cancel:hover{background:var(--input,#f2f2f4)}.blogify-edit-countdown{font-size:9px;color:var(--muted,#737373);margin-left:5px;white-space:nowrap}.composer.edit-mode .input-box{border-color:#3797f0!important;box-shadow:0 0 0 2px rgba(55,151,240,.1)}.composer.edit-mode .send-btn{display:grid!important;background:#3797f0!important}.composer.edit-mode .send-btn i{font-size:15px}.composer.edit-mode .composer-btn{opacity:.55}`;document.head.appendChild(s)}
+function socket(){try{if(window.__BLOGIFY_CHAT_SOCKET?.connected)return window.__BLOGIFY_CHAT_SOCKET;const ms=window.io?.managers||{};for(const k of Object.keys(ms)){const s=ms[k]?.nsps?.['/'];if(s?.connected)return s}}catch(_){}return null}
+function toast(m){const t=$('toast');if(!t)return;t.textContent=m;t.classList.add('show');clearTimeout(t.__t);t.__t=setTimeout(()=>t.classList.remove('show'),2200)}
+function installUnsend(){const b=$('unsendAction');if(!b||b.dataset.liveUnsendBound)return;b.dataset.liveUnsendBound='1';b.dataset.liveBound='1';b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();const m=window.__BLOGIFY_SELECTED_MESSAGE,cid=window.__BLOGIFY_CONVERSATION_ID||new URLSearchParams(location.search).get('conversation');if(!m?._id||!cid)return;if(!confirm('Unsend this message for everyone?'))return;const s=socket();if(!s)return toast('Chat connection is unavailable');b.disabled=true;const span=b.querySelector('span'),old=span?.textContent;if(span)span.textContent='Unsending…';let done=false,timeout;const finish=(ok,msg)=>{if(done)return;done=true;clearTimeout(timeout);b.disabled=false;if(span)span.textContent=old||'Unsend';toast(msg);if(ok){$('overlay')?.classList.remove('open');$('actionSheet')?.classList.remove('open')}};const onUnsent=d=>{if(String(d?.messageId)===String(m._id))finish(true,'Message unsent for everyone')};const onError=d=>finish(false,d?.message||'Unable to unsend message');s.once('message:unsent',onUnsent);s.once('message:action:error',onError);timeout=setTimeout(()=>{s.off('message:unsent',onUnsent);s.off('message:action:error',onError);finish(false,'Unsend timed out. Please try again.')},8000);s.emit('message:unsend',{conversationId:String(cid),messageId:String(m._id)})},true)}
+function enhance(){const bar=$('blogifyEditBar'),composer=$('composer'),send=$('sendButton');installUnsend();if(!bar||!composer)return;style();if(!bar.querySelector('.blogify-edit-countdown')){const title=bar.querySelector('.blogify-edit-title');if(title){const c=document.createElement('span');c.className='blogify-edit-countdown';title.appendChild(c)}}const visible=bar.classList.contains('show');composer.classList.toggle('edit-mode',visible);if(send){if(!originalSend)originalSend={html:send.innerHTML,title:send.title,aria:send.getAttribute('aria-label')};if(visible){send.innerHTML='<i class="fas fa-check"></i>';send.title='Update message';send.setAttribute('aria-label','Update message')}else{send.innerHTML=originalSend.html;send.title=originalSend.title||'Send message';if(originalSend.aria)send.setAttribute('aria-label',originalSend.aria);else send.removeAttribute('aria-label')}}const countdown=bar.querySelector('.blogify-edit-countdown');if(visible&&!timer)timer=setInterval(()=>{if(!bar.classList.contains('show')){clearInterval(timer);timer=null;return}const started=Number(window.__BLOGIFY_EDIT_STARTED_AT||0),left=Math.max(0,EDIT_WINDOW_MS-(Date.now()-started));if(countdown)countdown.textContent=started?`${Math.ceil(left/1000)}s`:'';if(left<=0){clearInterval(timer);timer=null;if(countdown)countdown.textContent='Expired'}},250);else if(!visible&&timer){clearInterval(timer);timer=null}}
+function attach(){style();installUnsend();const poll=setInterval(()=>{enhance();if($('blogifyEditBar'))clearInterval(poll)},100);setTimeout(()=>clearInterval(poll),5000);enhance()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach,{once:true});else attach();
 })();
