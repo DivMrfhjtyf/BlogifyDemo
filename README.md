@@ -1,33 +1,57 @@
+<div align="center">
+
 # 🚀 Blogify
 
-Blogify is a full-stack social blogging and communication platform built with Node.js, Express.js, MongoDB, EJS, Socket.IO, GraphQL, Cloudinary, Google OAuth, Web Push, and production-oriented security controls.
+### A modern full-stack social blogging, networking & real-time messaging platform
 
-It combines blogging, social networking, real-time messaging, notifications, user profiles, follow systems, privacy controls, media sharing, analytics, and administration in one application.
+<p>
+  <img src="https://img.shields.io/badge/Node.js-24.x-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express.js-Backend-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express.js" />
+  <img src="https://img.shields.io/badge/MongoDB-Database-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Socket.IO-Realtime-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.IO" />
+  <img src="https://img.shields.io/badge/GraphQL-API-E10098?style=for-the-badge&logo=graphql&logoColor=white" alt="GraphQL" />
+</p>
 
-## 📌 Project Status
+<p>
+  <a href="https://blogifydemo.onrender.com"><strong>🌐 Live Demo</strong></a>
+  &nbsp; • &nbsp;
+  <a href="https://github.com/Developer72663/BlogifyDemo"><strong>📦 Source Code</strong></a>
+</p>
 
-- **Version:** 2.1.0
-- **Runtime:** Node.js 24.x
-- **Application:** Express.js / EJS
-- **Database:** MongoDB / Mongoose
-- **Real-time:** Socket.IO
-- **API:** Express + GraphQL
+</div>
 
-## ✨ Features
+---
 
-### 👤 Authentication & Accounts
-- User registration and login
-- Email/OTP verification
-- Password reset
-- JWT authentication
-- HTTP-only authentication cookies
-- Google OAuth authentication
-- Profile management
-- Account privacy controls
-- Account deactivation/deletion
+## 🌟 About Blogify
 
-### 📝 Blogging
-- Create, edit, and delete blogs
+**Blogify** is a full-stack social blogging and communication platform built to bring publishing, social networking, notifications, analytics, and real-time conversations together in one application.
+
+It is designed as a feature-rich Node.js application with a traditional EJS frontend, MongoDB persistence, Socket.IO real-time communication, GraphQL APIs, Cloudinary media handling, Google OAuth, Web Push, email services, and production-oriented security controls.
+
+> **Project goal:** Build a complete social publishing experience where users can create content, discover people, build relationships, receive notifications, and communicate in real time.
+
+---
+
+## ✨ Highlights
+
+| Area | Highlights |
+| --- | --- |
+| 📝 **Blogging** | Create, edit, delete, draft, categories, tags, likes, comments, media and analytics |
+| 👥 **Social** | Follow, private accounts, follow requests, followers, following and blocking |
+| 💬 **Messaging** | Real-time chat, replies, editing, unsending, likes, read status and media |
+| 👨‍👩‍👧 **Groups** | Group conversations, member management and administration |
+| 🔔 **Notifications** | Social activity, follow requests, mentions, unread counts and Web Push |
+| 📊 **Analytics** | Views, devices, sources, geographic data, trends and author analytics |
+| 🔐 **Security** | JWT, secure cookies, validation, rate limiting, CSP, origin checks and authorization |
+| ☁️ **Media** | Cloudinary-powered images, videos and audio |
+| 🔌 **GraphQL** | GraphQL endpoint alongside the Express application |
+| 🛠️ **Admin** | Administrative controls and protected admin routes |
+
+---
+
+# 📝 Blogging
+
+- Create, edit and delete blog posts
 - Drafts and scheduled publishing
 - Categories and tags
 - Media uploads
@@ -35,34 +59,34 @@ It combines blogging, social networking, real-time messaging, notifications, use
 - Nested comment replies
 - View tracking
 - Reading-time calculation
-- Featured blogs
-- Advanced search
+- Featured content
+- Search and discovery
 - Blog analytics
 
-### 👥 Social Networking
-- Follow/unfollow users
+# 👥 Social Networking
+
+- Follow and unfollow users
 - Private accounts
 - Follow requests
-- Accept/reject follow requests
+- Accept or reject requests
 - Followers and following
-- User blocking and safety controls
+- User blocking
+- Safety controls
 - Profile discovery
 
-### 🔔 Notifications
-- Like, comment, reply, follow, mention, and follow-request notifications
-- Unread notification counts
-- Mark-as-read controls
-- Web Push notifications
+# 💬 Real-Time Messaging
 
-### 💬 Real-Time Messaging
-Powered by Socket.IO.
+Powered by **Socket.IO**.
 
-- One-to-one messaging
+- One-to-one conversations
 - Real-time message delivery
-- Text, image, video, and audio messages
+- Text messages
+- Image, video and audio messages
+- Voice/audio messaging
 - Message replies
 - Message editing
-- Message deletion and unsending
+- Message deletion
+- Unsend messages
 - Message likes
 - Read status
 - Typing indicators
@@ -71,31 +95,228 @@ Powered by Socket.IO.
 - Shared profiles and media
 - Conversation controls
 
-### 👥 Group Messaging
+# 👥 Group Messaging
+
 - Create groups
-- Add/remove members
+- Add and remove members
 - Group administration
 - Group conversations
 - Group media
 - Member management
 
-### 📊 Analytics
-- Blog views and daily view tracking
-- View-source and device tracking
+# 🔔 Notifications
+
+- Likes
+- Comments and replies
+- Follows
+- Follow requests
+- Mentions
+- Unread counts
+- Mark as read
+- Web Push notifications
+
+# 📊 Analytics
+
+- Blog views
+- Daily view tracking
+- View source tracking
+- Device tracking
 - Geographic analytics
-- Trending and most-liked blogs
+- Trending content
+- Most-liked content
 - Author statistics
 - Individual blog analytics
 
-### 🛡️ Security
-Blogify includes a security foundation containing authentication and authorization middleware, JWT authentication, HTTP-only and secure production cookies, SameSite protection, password hashing, OTP expiration/attempt limits, input validation, rate limiting, security headers, Content Security Policy, origin validation, protected admin routes, authenticated Socket.IO connections, and user safety controls.
+---
 
-> **Security notice:** No web application can honestly be guaranteed to be 100% secure. Production deployments should be independently tested, audited, and hardened for their specific infrastructure and requirements.
+# 🛡️ Security Foundation
 
-### ☁️ Media Uploads
-Cloudinary is used for profile images, blog media, and message attachments including images, video, and audio.
+Blogify includes a security foundation with:
 
-### 🔌 GraphQL
+- Authentication and authorization middleware
+- JWT authentication
+- HTTP-only cookies
+- Secure production cookies
+- SameSite cookie protection
+- Password hashing
+- OTP expiration and attempt limits
+- Input validation/sanitization
+- Rate limiting
+- Security headers
+- Content Security Policy
+- Origin validation
+- Protected admin routes
+- Authenticated Socket.IO connections
+- User blocking and safety controls
+
+> ⚠️ **Security notice:** No web application can honestly be guaranteed to be 100% secure. Production deployments should be independently tested, audited, monitored and hardened for their specific infrastructure and requirements.
+
+---
+
+# 🧰 Technology Stack
+
+### Backend
+
+- Node.js 24
+- Express.js
+- MongoDB
+- Mongoose
+- JWT
+- Passport / Google OAuth
+- Socket.IO
+- GraphQL
+
+### Frontend
+
+- EJS
+- HTML5
+- CSS3
+- JavaScript
+
+### Services & Infrastructure
+
+- Cloudinary
+- Web Push
+- Resend / SMTP
+- Upstash Redis
+
+---
+
+# 📁 Architecture
+
+```text
+Blogify/
+├── app.js
+├── package.json
+├── package-lock.json
+├── Dockerfile
+├── .env.example
+│
+├── graphql/
+│   └── schema.js
+│
+├── models/
+├── routes/
+├── middlewares/
+├── services/
+├── controllers/
+│
+├── views/
+├── public/
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+├── tests/
+└── scripts/
+```
+
+> The architecture may evolve as the project continues to be refactored and improved.
+
+---
+
+# ⚙️ Requirements
+
+- **Node.js:** 24.x
+- **npm**
+- **MongoDB**
+- **Git**
+
+Depending on enabled features:
+
+- Cloudinary
+- Google OAuth credentials
+- Upstash Redis
+- Email provider
+- Web Push / VAPID credentials
+
+---
+
+# 🚀 Quick Start
+
+### 1. Clone
+
+```bash
+git clone https://github.com/Developer72663/BlogifyDemo.git
+cd BlogifyDemo
+```
+
+### 2. Install
+
+```bash
+npm install
+```
+
+### 3. Configure environment
+
+Create `.env` using `.env.example` as the authoritative reference.
+
+**Never commit real credentials or production secrets.**
+
+### 4. Run in development
+
+```bash
+npm run dev
+```
+
+### 5. Run in production
+
+```bash
+npm start
+```
+
+---
+
+# 🔐 Environment Configuration
+
+The project uses environment variables for runtime, database, authentication, Redis, Google OAuth, email, Cloudinary and Web Push.
+
+Typical configuration includes:
+
+```env
+NODE_ENV=production
+PORT=8000
+APP_URL=https://your-domain.example
+FRONTEND_URL=https://your-domain.example
+SOCKET_URL=https://your-domain.example
+
+MONGODB_URI=
+JWT_SECRET=
+RESET_PASSWORD_SECRET=
+OTP_SECRET=
+BCRYPT_ROUNDS=12
+
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=
+
+RESEND_API_KEY=
+EMAIL_FROM=
+
+EMAIL_USER=
+EMAIL_PASSWORD=
+SMTP_HOST=
+SMTP_PORT=465
+SMTP_SECURE=true
+
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=
+```
+
+Use the repository's `.env.example` for the complete, current variable list.
+
+---
+
+# 🔌 GraphQL
+
 GraphQL is available at:
 
 ```text
@@ -105,138 +326,51 @@ GraphQL is available at:
 Basic health query:
 
 ```graphql
-{ __typename }
+{
+  __typename
+}
 ```
 
 The GraphQL layer can expose application data supported by the current schema.
 
-## 🏗️ Technology Stack
+---
 
-**Backend:** Node.js 24, Express.js, MongoDB, Mongoose, JWT, Passport/Google OAuth, Socket.IO, GraphQL
+# 📡 Real-Time Messaging
 
-**Frontend:** EJS, HTML5, CSS3, JavaScript
+Blogify uses Socket.IO for real-time communication.
 
-**Services:** Cloudinary, Web Push, Resend/SMTP email, Upstash Redis
+The deployment environment must support the application's Socket.IO/WebSocket requirements. Reverse proxies and load balancers may require additional WebSocket configuration.
 
-## 📁 Project Structure
+---
 
-```text
-Blogify/
-├── app.js
-├── package.json
-├── package-lock.json
-├── Dockerfile
-├── .env.example
-├── graphql/
-│   └── schema.js
-├── models/
-├── routes/
-├── middlewares/
-├── services/
-├── views/
-├── public/
-├── tests/
-└── scripts/
-```
+# ☁️ Cloudinary Media
 
-> The structure may evolve as the application is refactored and new features are added.
+Cloudinary handles application media such as:
 
-## ⚙️ Requirements
+- Profile images
+- Blog images and media
+- Message attachments
+- Images
+- Videos
+- Audio
 
-- Node.js 24.x
-- npm
-- MongoDB
-- Git
+Production deployments should use credentials owned by the deployment owner.
 
-Depending on enabled features, you may also need Cloudinary, Google OAuth credentials, Upstash Redis, an email provider, and Web Push/VAPID credentials.
+---
 
-## 🚀 Installation
+# 🔔 Web Push
 
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Developer72663/BlogifyDemo.git
-cd BlogifyDemo
-```
-
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Configure environment variables
-
-Create a `.env` file using `.env.example` as the reference. Never commit real credentials or production secrets to GitHub.
-
-### 4. Run the application
-
-Development:
-
-```bash
-npm run dev
-```
-
-Production:
-
-```bash
-npm start
-```
-
-## 🔐 Environment Configuration
-
-The current `.env.example` contains configuration for runtime, database, authentication, Redis, Google OAuth, email, Cloudinary, and Web Push.
-
-Typical production variables include:
+Web Push requires VAPID credentials and HTTPS in production.
 
 ```env
-NODE_ENV=production
-PORT=8000
-APP_URL=https://your-domain.example
-FRONTEND_URL=https://your-domain.example
-SOCKET_URL=https://your-domain.example
-MONGODB_URI=
-JWT_SECRET=
-RESET_PASSWORD_SECRET=
-OTP_SECRET=
-BCRYPT_ROUNDS=12
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=
-RESEND_API_KEY=
-EMAIL_FROM=
-EMAIL_USER=
-EMAIL_PASSWORD=
-SMTP_HOST=
-SMTP_PORT=465
-SMTP_SECURE=true
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
 VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=
 ```
 
-Use the repository's `.env.example` as the authoritative list of currently supported variables.
+---
 
-## 🔑 Google OAuth
-
-When deploying with Google authentication, configure OAuth credentials for the deployment domain. The callback URL must exactly match the authorized redirect URI configured in Google Cloud Console.
-
-Do not reuse another person's production OAuth credentials.
-
-## 📡 Real-Time Messaging
-
-Blogify uses Socket.IO for real-time communication. The hosting environment must support the application's Socket.IO/WebSocket requirements. Reverse proxies and load balancers may require additional WebSocket configuration.
-
-## 🔔 Web Push
-
-Web Push requires VAPID credentials and HTTPS in production.
-
-## 🧪 Testing
+# 🧪 Testing
 
 Run the project's test command:
 
@@ -244,9 +378,32 @@ Run the project's test command:
 npm test
 ```
 
-Recommended testing areas include authentication, blogs, drafts, comments, likes, follow requests, notifications, messaging, media uploads, group messaging, admin functions, GraphQL, and security controls.
+Recommended functional testing areas:
 
-## 🐳 Docker
+- Authentication
+- Registration and login
+- OTP verification
+- Password reset
+- Google authentication
+- Blog creation/editing/deletion
+- Drafts and publishing
+- Comments and replies
+- Likes
+- Follow/unfollow
+- Private accounts and follow requests
+- Notifications
+- Real-time messaging
+- Message editing/deletion/unsending
+- Voice and media messaging
+- Group messaging
+- Cloudinary uploads
+- Admin functions
+- GraphQL
+- Security controls
+
+---
+
+# 🐳 Docker
 
 Blogify includes a Dockerfile for container deployment.
 
@@ -255,15 +412,28 @@ docker build -t blogify .
 docker run -p 8000:8000 --env-file .env blogify
 ```
 
-## 🌐 Deployment
+Production secrets should be supplied securely rather than committed to the repository.
 
-Blogify is designed for Node.js-compatible hosting environments such as Render, Koyeb, Railway, Google Cloud, AWS, and similar services.
+---
 
-Different providers can require configuration changes for environment variables, MongoDB, HTTPS/domain settings, OAuth callbacks, Cloudinary, email, Web Push, Redis, and Socket.IO/WebSockets.
+# 🌐 Deployment
 
-A successful deployment on one hosting provider does **not** guarantee zero configuration changes on another provider.
+Blogify is designed for Node.js-compatible hosting environments such as:
 
-## 🔒 Production Checklist
+- Render
+- Koyeb
+- Railway
+- Google Cloud
+- AWS
+- Similar Node.js hosting platforms
+
+Different providers can require configuration changes for environment variables, MongoDB, HTTPS/domain settings, OAuth callbacks, Cloudinary, email, Web Push, Redis and Socket.IO/WebSockets.
+
+> A successful deployment on one hosting provider does **not** guarantee zero configuration changes on another provider.
+
+---
+
+# ✅ Production Checklist
 
 - [ ] Set `NODE_ENV=production`
 - [ ] Generate strong authentication secrets
@@ -280,35 +450,71 @@ A successful deployment on one hosting provider does **not** guarantee zero conf
 - [ ] Verify production cookies
 - [ ] Run tests
 - [ ] Perform security testing
-- [ ] Test all major user flows
+- [ ] Test major user flows
 - [ ] Configure backups and monitoring
-
-## 💼 Commercial Use
-
-Blogify can serve as a foundation for social blogging, creator, community, publishing, social networking, and messaging-enabled platforms.
-
-For a commercial sale, licensing and ownership terms should be defined separately between the seller and buyer.
-
-## ⚠️ Production Disclaimer
-
-Blogify should be reviewed and configured before production use. The deployment owner is responsible for infrastructure, secrets, third-party services, domain configuration, security auditing, compliance, monitoring, backups, and hosting configuration.
-
-No software application can reasonably be guaranteed to be completely vulnerability-free.
-
-## 👨‍💻 Developer
-
-**Developer72663**
-
-GitHub: https://github.com/Developer72663
-
-Repository: https://github.com/Developer72663/BlogifyDemo
-
-## 📄 License
-
-The project currently uses the **ISC** license as specified by `package.json`.
-
-For an exclusive commercial sale or ownership transfer, use a separate written agreement defining ownership, source-code rights, commercial usage, redistribution rights, modification rights, exclusivity, support, and warranty/disclaimer terms.
 
 ---
 
-⭐ **Blogify — blogging, social networking, notifications, analytics, and real-time messaging in one platform.**
+# 💼 Commercial / Licensing
+
+Blogify can serve as a foundation for:
+
+- Social blogging platforms
+- Creator platforms
+- Community platforms
+- Publishing platforms
+- Social networking applications
+- Messaging-enabled platforms
+- Custom content platforms
+
+For a commercial sale, licensing and ownership terms should be defined separately between the seller and buyer.
+
+---
+
+# ⚠️ Production Disclaimer
+
+Blogify should be reviewed and configured before production use.
+
+The deployment owner is responsible for:
+
+- Production infrastructure
+- Secrets and credentials
+- Third-party services
+- Domain configuration
+- Security auditing
+- Compliance requirements
+- Monitoring
+- Backups
+- Hosting configuration
+
+No software application can reasonably be guaranteed to be completely vulnerability-free.
+
+---
+
+# 👨‍💻 Developer
+
+**Developer72663**
+
+- GitHub: https://github.com/Developer72663
+- Repository: https://github.com/Developer72663/BlogifyDemo
+- Live Demo: https://blogifydemo.onrender.com
+
+---
+
+# 📄 License
+
+The project currently uses the **ISC** license as specified by `package.json`.
+
+For an exclusive commercial sale or ownership transfer, use a separate written agreement defining ownership, source-code rights, commercial usage, redistribution rights, modification rights, exclusivity, support and warranty/disclaimer terms.
+
+---
+
+<div align="center">
+
+### ⭐ Blogify
+
+**Blogging • Social Networking • Notifications • Analytics • Real-Time Messaging**
+
+Made with ❤️ using Node.js and MongoDB.
+
+</div>
