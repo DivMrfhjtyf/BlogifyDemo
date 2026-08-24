@@ -7,12 +7,21 @@ const hasUpstash = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPS
 let redis = null;
 if (hasUpstash) redis = Redis.fromEnv();
 
-function createDistributedLimiter(name, limit, duration, keyFn) {
+function createDistributedLimiter(name, limit, duration, keyFn, options = {}) {
+    const skip = options.skip || (() => false);
     if (!redis) {
         if (process.env.NODE_ENV === 'production') {
             console.warn(`[rate-limit] ${name} is using process-local fallback. Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN for distributed protection.`);
         }
-        return rateLimit({ windowMs: duration, max: limit, standardHeaders: true, legacyHeaders: false, keyGenerator: keyFn, message: limiterMessage });
+        return rateLimit({
+            windowMs: duration,
+            max: limit,
+            standardHeaders: true,
+            legacyHeaders: false,
+            keyGenerator: keyFn,
+            message: limiterMessage,
+            skip,
+        });
     }
 
     const limiter = new Ratelimit({
@@ -23,6 +32,7 @@ function createDistributedLimiter(name, limit, duration, keyFn) {
     });
 
     return async (req, res, next) => {
+        if (skip(req)) return next();
         try {
             const result = await limiter.limit(keyFn(req));
             res.setHeader('RateLimit-Limit', String(result.limit));
@@ -43,7 +53,18 @@ const ipKey = (req) => req.ip;
 const loginLimiter = createDistributedLimiter('login', 5, 15 * 60 * 1000, ipKey);
 const otpLimiter = createDistributedLimiter('otp', 3, 10 * 60 * 1000, ipKey);
 const apiLimiter = createDistributedLimiter('api', 100, 15 * 60 * 1000, ipKey);
-const actionLimiter = createDistributedLimiter('action', 300, 15 * 60 * 1000, identityKey);
+
+// GET/HEAD/OPTIONS requests are reads. They must not consume the action
+// budget because pages such as /messages load many scripts and read endpoints.
+// Mutating requests (POST/PATCH/PUT/DELETE) remain protected.
+const actionLimiter = createDistributedLimiter(
+    'action',
+    300,
+    15 * 60 * 1000,
+    identityKey,
+    { skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method) }
+);
+
 const blogCreationLimiter = createDistributedLimiter('blog-create', 20, 60 * 60 * 1000, identityKey);
 const commentCreationLimiter = createDistributedLimiter('comment-create', 30, 10 * 60 * 1000, identityKey);
 
