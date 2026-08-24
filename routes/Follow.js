@@ -16,13 +16,16 @@ function hasId(list, id) {
   return Array.isArray(list) && list.some(value => String(value) === String(id));
 }
 
-async function notifyRequest(recipient, requester, requestId) {
+async function notifyRequest(recipient, requester, requestId, isFollowBack = false) {
   try {
     await NotificationService.createNotification(recipient._id, "follow_request", {
-      title: "Follow request",
-      message: `${requester.fullName} wants to follow you`,
+      title: isFollowBack ? "Follow back request" : "Follow request",
+      message: isFollowBack
+        ? `${requester.fullName} wants to follow you back`
+        : `${requester.fullName} wants to follow you`,
       actor: requester._id,
-      request: requestId
+      request: requestId,
+      isFollowBack
     });
   } catch (e) {
     console.error("Follow notification error:", e.message);
@@ -41,7 +44,6 @@ async function notifyAccepted(requester, recipient) {
   }
 }
 
-// Keep both sides synchronized. $addToSet prevents duplicate ObjectIds.
 async function syncFollow(requesterId, recipientId) {
   await Promise.all([
     User.findByIdAndUpdate(requesterId, { $addToSet: { following: recipientId } }),
@@ -67,16 +69,13 @@ async function countsFor(userId) {
 async function relationshipFor(viewerId, targetUser) {
   const viewer = await User.findById(viewerId).select("followers following").lean();
   const following = hasId(viewer?.following, targetUser._id);
-  const followBack = hasId(targetUser.following, viewerId);
-  let requested = false;
-
-  if (!following) {
-    requested = !!await FollowRequest.exists({
-      requester: viewerId,
-      recipient: targetUser._id,
-      status: "pending"
-    });
-  }
+  // target follows viewer => viewer is eligible to see/use Follow back.
+  const followBack = !following && hasId(targetUser.following, viewerId);
+  const requested = !following && !!await FollowRequest.exists({
+    requester: viewerId,
+    recipient: targetUser._id,
+    status: "pending"
+  });
 
   return { following, followBack, requested };
 }
@@ -95,13 +94,10 @@ router.post("/:userId/follow", async (req, res) => {
     if (!currentUser || !targetUser) return res.status(404).json({ success: false, message: "User not found" });
     if (currentUser.isDeactivated || targetUser.isDeactivated) return res.status(404).json({ success: false, message: "User not found" });
 
-    // Unfollow is always one-directional. Do not remove the other user's
-    // following relationship when they still follow the current user.
     if (currentUser.isFollowing(userId)) {
       await Promise.all([
         User.findByIdAndUpdate(currentUserId, { $pull: { following: userId } }),
         User.findByIdAndUpdate(userId, { $pull: { followers: currentUserId } }),
-        // A pending request cannot coexist with an active follow relationship.
         FollowRequest.deleteMany({ requester: currentUserId, recipient: userId, status: "pending" })
       ]);
 
@@ -124,10 +120,6 @@ router.post("/:userId/follow", async (req, res) => {
     }
 
     if (targetUser.isPrivate) {
-      // An accepted request is historical data. It must NOT automatically
-      // recreate a follow after the relationship was later unfollowed.
-      // If the relationship is no longer active, the same request document
-      // is safely recycled into a fresh pending request.
       const existing = await FollowRequest.findOne({
         requester: currentUserId,
         recipient: userId
@@ -145,10 +137,14 @@ router.post("/:userId/follow", async (req, res) => {
           followBack: hasId(targetUser.following, currentUserId),
           followerCount: targetCounts.followerCount,
           followingCount: meCounts.followingCount,
+          requestId: existing._id,
           message: "Follow request already pending"
         });
       }
 
+      // A Follow back is still a request when the target account is private.
+      // The target (A) must approve the reverse relationship (B -> A).
+      const isFollowBack = hasId(targetUser.following, currentUserId);
       const request = await FollowRequest.findOneAndUpdate(
         { requester: currentUserId, recipient: userId },
         {
@@ -165,7 +161,7 @@ router.post("/:userId/follow", async (req, res) => {
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      await notifyRequest(targetUser, currentUser, request._id);
+      await notifyRequest(targetUser, currentUser, request._id, isFollowBack);
 
       const [meCounts, targetCounts] = await Promise.all([
         countsFor(currentUserId),
@@ -176,23 +172,30 @@ router.post("/:userId/follow", async (req, res) => {
         success: true,
         following: false,
         requested: true,
-        followBack: hasId(targetUser.following, currentUserId),
+        followBack: isFollowBack,
+        isFollowBack,
         followerCount: targetCounts.followerCount,
         followingCount: meCounts.followingCount,
         requestId: request._id,
-        message: existing?.status === "rejected" || existing?.status === "accepted"
-          ? "Follow request sent again"
-          : "Follow request sent"
+        message: isFollowBack
+          ? "Follow back request sent"
+          : existing?.status === "rejected" || existing?.status === "accepted"
+            ? "Follow request sent again"
+            : "Follow request sent"
       });
     }
 
     await syncFollow(currentUserId, userId);
 
     try {
+      const wasFollowBack = hasId(targetUser.following, currentUserId);
       await NotificationService.createNotification(userId, "follow", {
-        title: "New follower",
-        message: `${currentUser.fullName} started following you`,
-        actor: currentUserId
+        title: wasFollowBack ? "New follower" : "New follower",
+        message: wasFollowBack
+          ? `${currentUser.fullName} followed you back`
+          : `${currentUser.fullName} started following you`,
+        actor: currentUserId,
+        isFollowBack: wasFollowBack
       });
     } catch (e) {}
 
@@ -205,7 +208,7 @@ router.post("/:userId/follow", async (req, res) => {
       success: true,
       following: true,
       requested: false,
-      followBack: hasId(targetUser.following, currentUserId),
+      followBack: false,
       followerCount: targetCounts.followerCount,
       followingCount: meCounts.followingCount,
       message: "Followed successfully"
@@ -216,7 +219,6 @@ router.post("/:userId/follow", async (req, res) => {
   }
 });
 
-// Return the complete directional relationship state for profile UIs.
 router.get("/:userId/state", async (req, res) => {
   try {
     if (!validObjectId(req.params.userId)) return res.status(400).json({ success: false, message: "Invalid user" });
@@ -230,11 +232,7 @@ router.get("/:userId/state", async (req, res) => {
     if (!targetUser || targetUser.isDeactivated) return res.status(404).json({ success: false, message: "User not found" });
 
     const state = await relationshipFor(req.user._id, targetUser);
-    return res.json({
-      success: true,
-      isPrivate: !!targetUser.isPrivate,
-      ...state
-    });
+    return res.json({ success: true, isPrivate: !!targetUser.isPrivate, ...state });
   } catch (error) {
     console.error("Follow state error:", error);
     return res.status(500).json({ success: false, message: "Failed to load follow state" });
