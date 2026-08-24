@@ -1,225 +1,314 @@
-# ✨ Blogify 2.0 - All New Features Added
+# 🚀 Blogify
 
-## 🎯 Major Features Implemented
+Blogify is a full-stack social blogging and communication platform built with Node.js, Express.js, MongoDB, EJS, Socket.IO, GraphQL, Cloudinary, Google OAuth, Web Push, and production-oriented security controls.
 
-### 1. **Draft & Publishing System** ✅
-- Save blogs as drafts before publishing
-- Scheduled publishing for future dates
-- Change blog status anytime
-- Automatic publish timestamp
+It combines blogging, social networking, real-time messaging, notifications, user profiles, follow systems, privacy controls, media sharing, analytics, and administration in one application.
 
-### 2. **Comment System** ✅
-- Nested replies on comments
-- Comment editing and deletion
-- Comment likes
-- Moderation support
-- Email notifications on comments
-- Soft delete for comments
+## 📌 Project Status
 
-### 3. **Tags & Categories** ✅
-- Add multiple tags to blogs
-- Filter blogs by tags
-- Browse tagged blogs
-- Related blogs based on tags
-- Category organization
+- **Version:** 2.1.0
+- **Runtime:** Node.js 24.x
+- **Application:** Express.js / EJS
+- **Database:** MongoDB / Mongoose
+- **Real-time:** Socket.IO
+- **API:** Express + GraphQL
 
-### 4. **Like System** ✅
-- Like/unlike blogs
-- Like count tracking
-- Like notifications
-- Per-blog like analytics
+## ✨ Features
 
-### 5. **Blog Analytics** ✅
-- View count per blog
-- Daily view tracking
-- View source tracking (direct, search, social, referral)
-- Device tracking (mobile, tablet, desktop)
-- Geographic location tracking
-- Trending blogs
-- Most liked blogs
-- Author statistics dashboard
-- Top performing blogs
+### 👤 Authentication & Accounts
+- User registration and login
+- Email/OTP verification
+- Password reset
+- JWT authentication
+- HTTP-only authentication cookies
+- Google OAuth authentication
+- Profile management
+- Account privacy controls
+- Account deactivation/deletion
 
-### 6. **Reading Time** ✅
-- Automatic reading time calculation
-- Based on average reading speed
-- Displayed on blog view
+### 📝 Blogging
+- Create, edit, and delete blogs
+- Drafts and scheduled publishing
+- Categories and tags
+- Media uploads
+- Likes and comments
+- Nested comment replies
+- View tracking
+- Reading-time calculation
+- Featured blogs
+- Advanced search
+- Blog analytics
 
-### 7. **Follower System** ✅
+### 👥 Social Networking
 - Follow/unfollow users
-- Follower count
-- Following count
-- Follower notifications
-- Email on new followers
+- Private accounts
+- Follow requests
+- Accept/reject follow requests
+- Followers and following
+- User blocking and safety controls
+- Profile discovery
 
-### 8. **Featured Blogs** ✅
-- Admin can feature blogs
-- Featured section on homepage
-- Featured rank ordering
-- Featured blogs carousel
+### 🔔 Notifications
+- Like, comment, reply, follow, mention, and follow-request notifications
+- Unread notification counts
+- Mark-as-read controls
+- Web Push notifications
 
-### 9. **Advanced Search** ✅
-- Search by title and content
-- Filter by tags
-- Filter by sort order
-- Filter by date range
-- Pagination support
+### 💬 Real-Time Messaging
+Powered by Socket.IO.
 
-### 10. **Dark Mode Theme** ✅
-- Light/Dark theme toggle
-- User theme preference saved
-- Database persistence
+- One-to-one messaging
+- Real-time message delivery
+- Text, image, video, and audio messages
+- Message replies
+- Message editing
+- Message deletion and unsending
+- Message likes
+- Read status
+- Typing indicators
+- Online/offline status
+- Message requests
+- Shared profiles and media
+- Conversation controls
 
-### 11. **Notifications System** ✅
-- Comment notifications
-- Like notifications
-- Follow notifications
-- Reply notifications
-- Mention notifications
-- Unread notification count
-- Mark as read functionality
-- Mark all as read functionality
-- Notification center
+### 👥 Group Messaging
+- Create groups
+- Add/remove members
+- Group administration
+- Group conversations
+- Group media
+- Member management
 
-### 12. **User Profiles** ✅
-- Enhanced profile information
-- Bio section
-- Website link
-- Profile image
-- Follower/Following count
-- Blog statistics
-- Blog activity feed
+### 📊 Analytics
+- Blog views and daily view tracking
+- View-source and device tracking
+- Geographic analytics
+- Trending and most-liked blogs
+- Author statistics
+- Individual blog analytics
 
-### 13. **Security Enhancements** ✅
-- Rate limiting on login attempts
-- Rate limiting on OTP requests
-- Rate limiting on API calls
-- Rate limiting on blog creation
-- Input validation and sanitization
-- CSRF protection ready
-- Security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection)
+### 🛡️ Security
+Blogify includes a security foundation containing authentication and authorization middleware, JWT authentication, HTTP-only and secure production cookies, SameSite protection, password hashing, OTP expiration/attempt limits, input validation, rate limiting, security headers, Content Security Policy, origin validation, protected admin routes, authenticated Socket.IO connections, and user safety controls.
 
----
+> **Security notice:** No web application can honestly be guaranteed to be 100% secure. Production deployments should be independently tested, audited, and hardened for their specific infrastructure and requirements.
 
-## 🔐 Vercel Production Environment Setup
+### ☁️ Media Uploads
+Cloudinary is used for profile images, blog media, and message attachments including images, video, and audio.
 
-The application intentionally **does not contain a fallback JWT secret**. Authentication requires a strong `JWT_SECRET` at runtime. This secret must never be committed to GitHub.
-
-Before deploying to Vercel, configure these variables under **Vercel → Project → Settings → Environment Variables → Production**:
+### 🔌 GraphQL
+GraphQL is available at:
 
 ```text
-NODE_ENV=production
-APP_URL=https://YOUR-DOMAIN
-FRONTEND_URL=https://YOUR-DOMAIN
-MONGODB_URI=your-mongodb-uri
-JWT_SECRET=<random-secret-at-least-32-characters>
-RESET_PASSWORD_SECRET=<different-random-secret>
-OTP_SECRET=<different-random-secret>
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_CALLBACK_URL=https://YOUR-DOMAIN/auth/google/callback
+/graphql
 ```
 
-Generate a strong JWT secret locally with:
+Basic health query:
+
+```graphql
+{ __typename }
+```
+
+The GraphQL layer can expose application data supported by the current schema.
+
+## 🏗️ Technology Stack
+
+**Backend:** Node.js 24, Express.js, MongoDB, Mongoose, JWT, Passport/Google OAuth, Socket.IO, GraphQL
+
+**Frontend:** EJS, HTML5, CSS3, JavaScript
+
+**Services:** Cloudinary, Web Push, Resend/SMTP email, Upstash Redis
+
+## 📁 Project Structure
+
+```text
+Blogify/
+├── app.js
+├── package.json
+├── package-lock.json
+├── Dockerfile
+├── .env.example
+├── graphql/
+│   └── schema.js
+├── models/
+├── routes/
+├── middlewares/
+├── services/
+├── views/
+├── public/
+├── tests/
+└── scripts/
+```
+
+> The structure may evolve as the application is refactored and new features are added.
+
+## ⚙️ Requirements
+
+- Node.js 24.x
+- npm
+- MongoDB
+- Git
+
+Depending on enabled features, you may also need Cloudinary, Google OAuth credentials, Upstash Redis, an email provider, and Web Push/VAPID credentials.
+
+## 🚀 Installation
+
+### 1. Clone the repository
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+git clone https://github.com/Developer72663/BlogifyDemo.git
+cd BlogifyDemo
 ```
 
-**Never paste the generated secret into source code, `.env.example`, GitHub, or chat.**
+### 2. Install dependencies
 
-After adding or changing Production environment variables, create a new Vercel Production deployment so the new values are available to serverless functions.
+```bash
+npm install
+```
 
-For Google OAuth, the `GOOGLE_CALLBACK_URL` value must exactly match an authorized redirect URI configured in Google Cloud Console, including protocol, hostname, path, and trailing-slash behavior.
+### 3. Configure environment variables
 
-The repository's `.env.example` contains placeholders only and is safe to commit.
+Create a `.env` file using `.env.example` as the reference. Never commit real credentials or production secrets to GitHub.
+
+### 4. Run the application
+
+Development:
+
+```bash
+npm run dev
+```
+
+Production:
+
+```bash
+npm start
+```
+
+## 🔐 Environment Configuration
+
+The current `.env.example` contains configuration for runtime, database, authentication, Redis, Google OAuth, email, Cloudinary, and Web Push.
+
+Typical production variables include:
+
+```env
+NODE_ENV=production
+PORT=8000
+APP_URL=https://your-domain.example
+FRONTEND_URL=https://your-domain.example
+SOCKET_URL=https://your-domain.example
+MONGODB_URI=
+JWT_SECRET=
+RESET_PASSWORD_SECRET=
+OTP_SECRET=
+BCRYPT_ROUNDS=12
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=
+RESEND_API_KEY=
+EMAIL_FROM=
+EMAIL_USER=
+EMAIL_PASSWORD=
+SMTP_HOST=
+SMTP_PORT=465
+SMTP_SECURE=true
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=
+```
+
+Use the repository's `.env.example` as the authoritative list of currently supported variables.
+
+## 🔑 Google OAuth
+
+When deploying with Google authentication, configure OAuth credentials for the deployment domain. The callback URL must exactly match the authorized redirect URI configured in Google Cloud Console.
+
+Do not reuse another person's production OAuth credentials.
+
+## 📡 Real-Time Messaging
+
+Blogify uses Socket.IO for real-time communication. The hosting environment must support the application's Socket.IO/WebSocket requirements. Reverse proxies and load balancers may require additional WebSocket configuration.
+
+## 🔔 Web Push
+
+Web Push requires VAPID credentials and HTTPS in production.
+
+## 🧪 Testing
+
+Run the project's test command:
+
+```bash
+npm test
+```
+
+Recommended testing areas include authentication, blogs, drafts, comments, likes, follow requests, notifications, messaging, media uploads, group messaging, admin functions, GraphQL, and security controls.
+
+## 🐳 Docker
+
+Blogify includes a Dockerfile for container deployment.
+
+```bash
+docker build -t blogify .
+docker run -p 8000:8000 --env-file .env blogify
+```
+
+## 🌐 Deployment
+
+Blogify is designed for Node.js-compatible hosting environments such as Render, Koyeb, Railway, Google Cloud, AWS, and similar services.
+
+Different providers can require configuration changes for environment variables, MongoDB, HTTPS/domain settings, OAuth callbacks, Cloudinary, email, Web Push, Redis, and Socket.IO/WebSockets.
+
+A successful deployment on one hosting provider does **not** guarantee zero configuration changes on another provider.
+
+## 🔒 Production Checklist
+
+- [ ] Set `NODE_ENV=production`
+- [ ] Generate strong authentication secrets
+- [ ] Configure MongoDB
+- [ ] Configure Cloudinary
+- [ ] Configure Google OAuth
+- [ ] Configure email
+- [ ] Configure Web Push
+- [ ] Configure Redis where required
+- [ ] Configure HTTPS and production domain
+- [ ] Verify Socket.IO/WebSocket support
+- [ ] Review origin/CORS configuration
+- [ ] Review administrator accounts
+- [ ] Verify production cookies
+- [ ] Run tests
+- [ ] Perform security testing
+- [ ] Test all major user flows
+- [ ] Configure backups and monitoring
+
+## 💼 Commercial Use
+
+Blogify can serve as a foundation for social blogging, creator, community, publishing, social networking, and messaging-enabled platforms.
+
+For a commercial sale, licensing and ownership terms should be defined separately between the seller and buyer.
+
+## ⚠️ Production Disclaimer
+
+Blogify should be reviewed and configured before production use. The deployment owner is responsible for infrastructure, secrets, third-party services, domain configuration, security auditing, compliance, monitoring, backups, and hosting configuration.
+
+No software application can reasonably be guaranteed to be completely vulnerability-free.
+
+## 👨‍💻 Developer
+
+**Developer72663**
+
+GitHub: https://github.com/Developer72663
+
+Repository: https://github.com/Developer72663/BlogifyDemo
+
+## 📄 License
+
+The project currently uses the **ISC** license as specified by `package.json`.
+
+For an exclusive commercial sale or ownership transfer, use a separate written agreement defining ownership, source-code rights, commercial usage, redistribution rights, modification rights, exclusivity, support, and warranty/disclaimer terms.
 
 ---
 
-## 🆕 Recent Change: Unified Profile View (Breaking / Important)
-To simplify maintenance and improve consistency the public and private profile templates have been unified.
-
-What changed
-- Removed: `views/publicProfile.ejs` (legacy public-only template).
-- Kept: `views/profile.ejs` — now a single template that supports:
-  - Public viewing (logged-out visitors)
-  - Authenticated users viewing other profiles (follow/unfollow, conditional followers display)
-  - Profile owner view (edit button + analytics tab)
-- Route: `routes/publicProfile.js` now renders `profile.ejs` and passes the profile as `user`. The route remains mounted at `/profile/:userId`.
-
-Why
-- Single source of truth for public profile UI reduces duplication and makes it easier to apply future UX/behavior improvements.
-- Privacy rules (followers/following visibility) are enforced server-side and reflected correctly in the unified template.
-
-Developer notes / migration steps
-- If you linked to `/public/<id>` anywhere in your code or templates, update those links to `/profile/<id>`. Run a quick search in the repo:
-  - grep -R "/public/" -n .
-- Confirm `routes/publicProfile.js` renders `profile` (not `publicProfile`) and that it passes the profile object as `user` (the template expects the profile to be in `user` and the logged-in viewer in `res.locals.user`).
-- Remove the old file from your branch (already removed in this update):
-  - git rm views/publicProfile.ejs
-  - git commit -m "Remove publicProfile.ejs, use unified profile.ejs"
-
-Testing checklist
-1. Anonymous visitor
-   - Visit `/profile/<userId>` while logged out — public blogs and basic profile info should be visible; the follow CTA should route to sign-in.
-2. Authenticated visitor (another user)
-   - Visit `/profile/<otherUserId>` — follow/unfollow flows should work; if mutual follow, followers/following lists become visible.
-3. Profile owner
-   - Visit `/profile/<yourUserId>` while logged in — Edit Profile and Analytics tab should be visible; analytics tab lazy-loads author stats.
-4. Links
-   - Update any anchors that previously referenced `/public/<id>` to `/profile/<id>` to keep navigation consistent.
-
----
-
-## 📁 New Files Added
-(See repo for full list)
-
-### Models
-- Blog, BlogAnalytics, Comment, Notification, User, etc.
-
-### Routes
-- Blogs, Comments, Profile (/profile/:userId), Follow, Notifications, Analytics, Admin, Auth, Google OAuth
-
-### Middleware
-- Authentication cookie checker
-- Rate limiting
-- Query param parsing
-- Cloudinary uploads
-- Validation utilities
-
-### Services
-- AnalyticsService, NotificationService, Email service, Authentication (JWT)
-
----
-
-## 🔄 Enhanced Files
-- Consolidated profile views and routes (see "Unified Profile View" above)
-- Improved notifications and email templates
-- Better error pages and consistent partials
-
----
-
-## 🚀 How to run locally
-1. Copy environment variables from `.env.example` and fill in values (MongoDB URI, JWT secret, Cloudinary credentials, Google OAuth values, SMTP config).
-2. Install dependencies:
-   - npm install
-3. Start the dev server:
-   - npm run dev
-4. Visit `http://localhost:8000`
-
----
-
-## 🧪 Tests & QA
-- Manually verify the profile pages for different viewer states (owner, logged-in other user, anonymous).
-- Confirm follow/unfollow notifications and emails deliver correctly.
-- Confirm analytics pages render and the author stats endpoint works for the owner.
-
----
-
-## 🙋‍♂️ Need help?
-If you'd like, I can:
-- Open a PR that removes `views/publicProfile.ejs` and commits the unified `views/profile.ejs` + updated route.
-- Produce a patch file you can apply locally.
-- Search and replace any leftover `/public/` links across the repo.
-
-Just tell me which you'd prefer and I will prepare it.
+⭐ **Blogify — blogging, social networking, notifications, analytics, and real-time messaging in one platform.**
