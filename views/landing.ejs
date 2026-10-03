@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include("./partials/head") %>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="Blogify is a home for thoughtful stories, fresh ideas, and curious writers.">
+  <title>Blogify — Your ideas deserve a home</title>
+  <style>
+    :root{--land-bg:#f8f8f5;--land-ink:#171816;--land-muted:#686b64;--land-line:#e7e8e1;--land-accent:#d7f36a}
+    *{box-sizing:border-box}body{margin:0;background:var(--land-bg);color:var(--land-ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+    .landing{min-height:100vh;overflow:hidden}.land-nav{max-width:1240px;margin:auto;padding:22px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand img{width:148px;max-height:54px;object-fit:contain;display:block}.nav-actions{display:flex;align-items:center;gap:10px}.nav-actions a,.hero-actions a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-weight:750;border-radius:999px;padding:12px 20px;font-size:.9rem}.nav-signin{color:var(--land-ink);border:1px solid var(--land-line)}.nav-join,.primary{background:var(--land-ink);color:#fff}.hero{max-width:1240px;margin:auto;padding:72px 28px 60px;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:42px}.eyebrow{display:inline-flex;align-items:center;gap:9px;text-transform:uppercase;letter-spacing:.15em;font-size:.72rem;font-weight:850;color:#5c6254}.eyebrow:before{content:"";width:25px;height:2px;background:#91a93a}.hero h1{font-size:clamp(3.2rem,7.6vw,6.8rem);line-height:.91;letter-spacing:-.085em;margin:22px 0 24px;max-width:760px;font-weight:850}.hero h1 span{background:var(--land-accent);padding:0 .12em;box-decoration-break:clone;-webkit-box-decoration-break:clone}.hero-copy{max-width:530px;color:var(--land-muted);font-size:1.1rem;line-height:1.7}.hero-actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:30px}.hero-actions a{padding:15px 23px}.secondary{border:1px solid #d8d9d2;color:var(--land-ink)}.trust{margin-top:26px;color:#7c7f77;font-size:.78rem}.visual{position:relative;min-height:480px;display:grid;place-items:center}.visual-glow{position:absolute;width:min(95%,440px);aspect-ratio:1;border-radius:50%;background:#e9eddd}.mock{position:relative;width:min(100%,430px);background:#fff;border:1px solid #e9eae5;border-radius:25px;padding:23px;box-shadow:0 28px 80px rgba(29,32,22,.12);transform:rotate(2deg)}.mock-top{display:flex;align-items:center;justify-content:space-between;color:#777b71;font-size:.7rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase}.mock-brand{display:flex;align-items:center;gap:8px;color:#222}.mock-brand img{width:27px;height:27px;object-fit:contain}.mock-cover{height:190px;border-radius:16px;margin:18px 0;background:linear-gradient(135deg,#d9e5bd,#a7b68a 55%,#5d6e52);position:relative;overflow:hidden}.mock-cover:before,.mock-cover:after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.22)}.mock-cover:before{width:210px;height:210px;right:-35px;top:-65px}.mock-cover:after{width:140px;height:140px;left:35px;bottom:-85px}.mock-tag{font-size:.68rem;font-weight:800;letter-spacing:.12em;color:#7d8b5e;text-transform:uppercase}.mock h2{font-size:1.55rem;line-height:1.14;letter-spacing:-.045em;margin:9px 0}.mock-desc{color:#777b71;font-size:.82rem;line-height:1.5}.mock-foot{display:flex;align-items:center;gap:9px;border-top:1px solid #eee;padding-top:15px;margin-top:17px;font-size:.75rem;color:#777}.mock-avatar{width:30px;height:30px;border-radius:50%;background:#d8d9ce}.float-note{position:absolute;right:-10px;bottom:40px;background:var(--land-accent);padding:15px 19px;border-radius:15px;font-weight:800;font-size:.83rem;box-shadow:0 12px 30px rgba(0,0,0,.08);transform:rotate(-4deg)}.features{max-width:1240px;margin:0 auto;padding:32px 28px 90px}.feature-top{border-top:1px solid var(--land-line);padding-top:27px;display:flex;justify-content:space-between;gap:25px;align-items:flex-start}.feature-top h2{font-size:1.35rem;letter-spacing:-.04em;margin:0}.feature-top p{max-width:500px;color:var(--land-muted);margin:0;line-height:1.6}.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:27px}.feature{padding:22px;border:1px solid var(--land-line);border-radius:17px;background:rgba(255,255,255,.55)}.feature-icon{width:37px;height:37px;border-radius:12px;background:#edf2df;display:grid;place-items:center;font-size:1.1rem}.feature h3{font-size:1rem;margin:17px 0 7px}.feature p{font-size:.84rem;color:var(--land-muted);line-height:1.55;margin:0}.land-footer{max-width:1240px;margin:auto;padding:20px 28px 30px;border-top:1px solid var(--land-line);display:flex;justify-content:space-between;gap:15px;color:#85877f;font-size:.75rem}
+    @media(max-width:800px){.hero{grid-template-columns:1fr;padding-top:45px;gap:5px}.hero h1{font-size:clamp(3.4rem,13vw,5.5rem)}.visual{min-height:430px}.mock{width:min(92%,430px)}.feature-top{display:block}.feature-top p{margin-top:10px}.feature-grid{grid-template-columns:1fr}}@media(max-width:520px){.land-nav{padding:16px 15px}.brand img{width:115px;max-height:42px}.nav-actions{gap:7px}.nav-actions a{font-size:.76rem;padding:10px 13px}.hero{padding:44px 18px 20px}.hero-copy{font-size:1rem}.hero-actions a{flex:1;padding:14px 15px}.visual{min-height:380px}.mock{padding:17px;border-radius:20px}.mock-cover{height:155px}.float-note{right:0;bottom:22px}.features{padding:20px 18px 55px}.land-footer{padding:18px;flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+<div class="landing">
+  <header class="land-nav">
+    <a class="brand" href="/" aria-label="Blogify home"><img src="/imgs/Logo.png" alt="Blogify"></a>
+    <nav class="nav-actions" aria-label="Account"><a class="nav-signin" href="/user/signin">Sign in</a><a class="nav-join" href="/user/signup">Get started <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main>
+    <section class="hero">
+      <div>
+        <div class="eyebrow">A little space for big ideas</div>
+        <h1>Your ideas<br>deserve a <span>home.</span></h1>
+        <p class="hero-copy">Read stories that spark something. Share what you know. Find your people through words, photos, and creative work on Blogify.</p>
+        <div class="hero-actions"><a class="primary" href="/user/signup">Create your free account <span aria-hidden="true">↗</span></a><a class="secondary" href="/user/signin">I already have an account</a></div>
+        <p class="trust">A welcoming place to write, discover, and connect.</p>
+      </div>
+      <div class="visual" aria-label="Preview of a Blogify story">
+        <div class="visual-glow"></div>
+        <article class="mock">
+          <div class="mock-top"><span class="mock-brand"><img src="/imgs/Logo.png" alt=""> Blogify reads</span><span>Editor's pick</span></div>
+          <div class="mock-cover"></div>
+          <div class="mock-tag">Ideas · Creativity</div>
+          <h2>Make room for the things you want to say.</h2>
+          <p class="mock-desc">A thoughtful feed for curious minds, independent voices, and everyday inspiration.</p>
+          <div class="mock-foot"><span class="mock-avatar"></span><span>Stories by people like you</span><span>·</span><span>4 min read</span></div>
+        </article>
+        <div class="float-note">Your next story starts here ✦</div>
+      </div>
+    </section>
+    <section class="features">
+      <div class="feature-top"><h2>More than a place to post.</h2><p>Blogify brings your reading and creating together, so you can explore new perspectives and publish at your own pace.</p></div>
+      <div class="feature-grid">
+        <article class="feature"><div class="feature-icon">✍</div><h3>Write your way</h3><p>Publish articles and personal stories, from quick thoughts to deeper guides.</p></article>
+        <article class="feature"><div class="feature-icon">◎</div><h3>Discover fresh voices</h3><p>Explore topics, follow writers, and find ideas worth coming back to.</p></article>
+        <article class="feature"><div class="feature-icon">♡</div><h3>Connect through creativity</h3><p>Share photos and videos, join conversations, and grow your community.</p></article>
+      </div>
+    </section>
+  </main>
+  <footer class="land-footer"><span>© <%= new Date().getFullYear() %> Blogify</span><span>Read · Create · Connect</span></footer>
+</div>
+<%- include("./partials/scripts") %>
+</body>
+</html>
